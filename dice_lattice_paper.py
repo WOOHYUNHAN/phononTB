@@ -16,35 +16,27 @@ from draw_phononTB_HAN import *
 
 
 
-lat = [[1.59129249942129 , -2.75619945870095,  0.00000000000000], [1.59129249942129 ,  2.75619945870095,  0.00000000000000], [0.00000000000000 ,  0.00000000000000, 10.00000000000000]]
-orb = [[0.66666600000000 ,  0.33333300000000,  0.71006677700000 ], [0.00000000000000 ,  0.00000000000000,  0.86644056100000], [0.00000000000000 ,  0.00000000000000,  0.55369938800000]]
-mass = [36.0, 12.0, 12.0]
+lat_dice = [[1.,   -np.sqrt(3),0.0], [1.,   np.sqrt(3),0.0], [0.0, 0.0, 10.0]]
+orb_dice = [[0.0/3, 0.0/3, 0.5], [1.0/3, 2.0/3, 0.45], [2.0/3, 1.0/3, 0.55]]
+mass_dice = [1.5, 1., 1.]
 fc_nn  =  [[-1.0,0.0],[0.0,-1.0]]
 fc_nn1 = [[-22.19684176,   -7.699687431],[-7.699687431,   -13.306]]
 fc_nn2 = [[-22.19684176 ,    7.699687431],[ 7.699687431,   -13.306]]
 fc_nn3 = [[-8.860588573805234,    -0.000000000000000],[-0.000000000000000 ,  -26.642257254446765]]
 fc_nnn = [[0.1,0.0],[0.0,0.3]]
-V_info = np.array([-1.0, -0.1]) 
-V_info2 = np.array([-1.0, -1.05]) / 20.0
+V_info_dice = [-1.0, -0.2]
+
 ###############################################################################
-FC = ForceConstant(3, 3)
+FC_dice = ForceConstant(3, 3)
 
-FC.set_geometry(lat, orb, mass)
-FC.set_hopping(0,1,[0.0,0.0,0.0],V_info)
-FC.set_hopping(0,1,[1.0,0.0,0.0],V_info)
-FC.set_hopping(0,1,[1.0,1.0,0.0],V_info)
+FC_dice.set_geometry(lat_dice, orb_dice, mass_dice)
+FC_dice.set_hopping(0,1,[0.0,0.0,0.0],V_info_dice)
+FC_dice.set_hopping(0,1,[-1.0,-1.0,0.0],V_info_dice)
+FC_dice.set_hopping(0,1,[0.0,-1.0,0.0],V_info_dice)
 
-FC.set_hopping(0,2,[0.0,0.0,0.0],V_info)
-FC.set_hopping(0,2,[1.0,0.0,0.0],V_info)
-FC.set_hopping(0,2,[1.0,1.0,0.0],V_info)
-
-#FC.set_hopping(0,1,[0.0,1.0,0.0],V_info2)
-#FC.set_hopping(0,1,[0.0,-1.0,0.0],V_info2)
-#FC.set_hopping(0,1,[2.0,1.0,0.0],V_info2)
-#
-#FC.set_hopping(0,2,[0.0,1.0,0.0],V_info2)
-#FC.set_hopping(0,2,[0.0,-1.0,0.0],V_info2)
-#FC.set_hopping(0,2,[2.0,1.0,0.0],V_info2)
+FC_dice.set_hopping(0,2,[0.0,0.0,0.0],V_info_dice)
+FC_dice.set_hopping(0,2,[-1.0,-1.0,0.0],V_info_dice)
+FC_dice.set_hopping(0,2,[-1.0,0.0,0.0],V_info_dice)
 
 #FC_dice.set_hopping(0,0,[0.0,0.0],V_info_hex2)
 #FC_dice.set_hopping(1,1,[0.0,0.0],V_info_hex2)
@@ -56,18 +48,18 @@ FC.set_hopping(0,2,[1.0,1.0,0.0],V_info)
 #FC_dice.set_hopping(0,0,[1.0,1.0],V_info2_hex)
 #FC_dice.set_hopping(0,0,[0.0,-1.0],V_info2_hex)
 
-FC.set_acoustic_sum_rule()
+FC_dice.set_acoustic_sum_rule()
 #FC_dice.set_acoustic_sum_rule()
 
-FC.print_info()
+FC_dice.print_info()
 
 
 ###############################################################################
-alpha0 = [[0.0,0.0,0.02]]
-alpha3 = [[0.0,0.0,0.00],[0.0,0.0,0.05],[0.0,0.0,0.05]]
-q_path = [[0, 0, 0.0], [0.5, 0.0, 0.0], [1.0/3, 1.0/3, 0.0], [0.0, 0, 0.0]]
+alpha0 = [[0.0,0.0,0.05]]
+alpha3 = [[0.0,0.0,0.],[0.0,0.0,0.0],[0.0,0.0,0.0]]
+q_path_dice = [[0, 0, 0.0], [0.5, 0.0, 0.0], [1.0/3, 1.0/3, 0.0], [0.0, 0, 0.0]]
 
-q_spacing = 100
+q_spacing = 200
 
 
 q_grid = ['slice',[51, 51, 1], 0.0]  #### [q_slice mode, [nx, ny, nz], fixed_qpoints]
@@ -76,22 +68,23 @@ q_path_Kp = [[2.0/3+0.01,-1.0/3-0.01],[2.0/3+0.01,-1.0/3+0.01],[2.0/3-0.01,-1.0/
 q_path_X = [[1.0/2+0.0001,0.0/2-0.0001],[1.0/2+0.0001,0.0/2+0.0001],[1.0/2-0.0001,0.0/2+0.0001],[1.0/2-0.0001,0.0/2-0.0001],[1.0/2+0.0001,0.0/2-0.0001]]
 q_grid_berry_K = ['berryphase', q_path_K, 50]
 q_grid_berry_X = ['berryphase', q_path_X, 50]
-print FC.recip_vec
-#q_grid = ['berrycurv', [-2.5471742, 2.5471742], [-1.47061171, 1.47061171], [2, 0.0], 201, 201]
+print FC_dice.recip_vec
+#q_grid = ['berrycurv', [-2.7, 2.7], [-1.6, 1.6], [2, 0.0], 201, 201]
 
 ###############################################################################
-DM = DynamicalMatrix('2H_test', FC ,alpha0)
+DM_dice = DynamicalMatrix('dice_test', FC_dice ,alpha0)
 
 
-DM.get_phonon_band(q_path,q_spacing)
-DM.draw_phonon_band()
-#DM.make_phband_PROCAR_format(q_grid)
-#DM.get_3Dplot_data(14)
+#DM_dice.get_phonon_band(q_path_dice,q_spacing)
+#DM_dice.draw_phonon_band()
+#DM_dice.make_phband_PROCAR_format(q_grid)
+#DM_dice.get_3Dplot_data(12)
+#DM_dice.make_anime_file_for_vsim([0.0, 0.0, 0.0])
 
 
 ###############################################################################
-band_range = [int(i) for i in range(9,18)] ; print '# of bands = ' + str(len(band_range)) + ' Detail bands = ' + str(band_range)
-#CTI = ComputeTopologicalInvariants('2H_test',band_range, q_grid)
-#CTI.get_Willsons_loop()
+band_range = [int(i) for i in range(14,15)] ; print '# of bands = ' + str(len(band_range)) + ' Detail bands = ' + str(band_range)
+CTI_dice = ComputeTopologicalInvariants('dice_test',band_range, q_grid)
+CTI_dice.get_Willsons_loop()
 #CTI_hex.calculate_Berry_phase()
 

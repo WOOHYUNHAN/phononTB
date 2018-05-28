@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import cmath
 from matplotlib.collections import LineCollection
 import matplotlib.cm as cm
+import sys
+sys.path.insert(0, 'D:\github_localrep\phononTB')
 from draw_phononTB_HAN import *
 #from numeric import *
 
@@ -16,13 +18,13 @@ from draw_phononTB_HAN import *
 
 lat_dice = [[1.2333638807431999,   -2.1362489056675500,0.0], [1.2333638807431999,   2.1362489056675500,0.0], [0.0, 0.0, 12.0]]
 orb_dice = [[0.0/3, 0.0/3, 0.5], [1.0/3, 2.0/3, 0.4], [2.0/3, 1.0/3, 0.6]]
-mass_dice = [12.0, 12.0, 12.0]
+mass_dice = [24.0, 12.0, 12.0]
 fc_nn  =  [[-1.0,0.0],[0.0,-1.0]]
 fc_nn1 = [[-22.19684176,   -7.699687431],[-7.699687431,   -13.306]]
 fc_nn2 = [[-22.19684176 ,    7.699687431],[ 7.699687431,   -13.306]]
 fc_nn3 = [[-8.860588573805234,    -0.000000000000000],[-0.000000000000000 ,  -26.642257254446765]]
 fc_nnn = [[0.1,0.0],[0.0,0.3]]
-V_info_dice = [-1.0, -0.2]
+V_info_dice = [-1.0, -0.1]
 num_repeat = 31
 ###############################################################################
 FC_dice_edge = ForceConstant(3, 3)
@@ -54,7 +56,7 @@ FC_dice_edge.set_acoustic_sum_rule()
 FC_dice_edge.print_info()
 
 ###############################################################################
-alpha0 = [[0.0,0.0, 0.02]]
+alpha0 = [[0.0,0.0, 0.01]]
 alpha3 = [[0.0,0.0,0.08],[0.0,0.0,-0.04],[0.0,0.0,-0.04]]
 alpha3_edge = []
 for i in range(len(alpha3)):

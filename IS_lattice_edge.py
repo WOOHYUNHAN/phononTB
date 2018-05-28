@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import cmath
 from matplotlib.collections import LineCollection
 import matplotlib.cm as cm
+import sys
+sys.path.insert(0, 'D:\github_localrep\phononTB')
 from draw_phononTB_HAN import *
 #from numeric import *
 

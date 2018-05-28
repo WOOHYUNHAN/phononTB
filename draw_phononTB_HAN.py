@@ -10,7 +10,7 @@ from matplotlib.collections import LineCollection
 import matplotlib.cm as cm
 #from numeric import *
 
-class read_FC:
+class compatible_other_calculators:
     def __init__(self, calculator):
         self.calculator = calculator # phononpy and QE
 
@@ -582,8 +582,9 @@ class DynamicalMatrix:
 
 
         for i in range(band_num):
-            plt.plot(qx, eigenval[i])
+            plt.plot(qx, eigenval[i], color='black')
 
+        #plt.ylim(0, max(eigenval[:][:]))
         plt.xlim(min(sqx)-0.1, max(sqx)+0.1)
         fig.savefig('phband.png')
         plt.show()

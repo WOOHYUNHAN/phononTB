@@ -15,37 +15,31 @@ from draw_phononTB_HAN import *
 
 
 
-
-lat = [[1.59129249942129 , -2.75619945870095,  0.00000000000000], [1.59129249942129 ,  2.75619945870095,  0.00000000000000], [0.00000000000000 ,  0.00000000000000, 10.00000000000000]]
-orb = [[0.66666600000000 ,  0.33333300000000,  0.71006677700000 ], [0.00000000000000 ,  0.00000000000000,  0.86644056100000], [0.00000000000000 ,  0.00000000000000,  0.55369938800000]]
-mass = [36.0, 12.0, 12.0]
+lat = [[3.2965255286141275   , 0.0000000000000000 ,   0.00000000000000], [ 0.0000000000000000   , 4.6163782213009217,   0.00000000000000], [0.00000000000000,  0.00000000000000,  11.0944999612347637]]
+orb = [[0.5000000000000000 , 0.9110624954704438 , 0.5948293903243029], [-0.0000000000000000 , 0.4110624954704438 , 0.4051706096756971], [-0.0000000000000000 , 0.5889375045295562 , 0.5948293903243029],[0.5000000000000000 , 0.0889375045295562 , 0.4051706096756971]]
+mass = [1.0, 1.0, 1.0, 1.0]
 fc_nn  =  [[-1.0,0.0],[0.0,-1.0]]
 fc_nn1 = [[-22.19684176,   -7.699687431],[-7.699687431,   -13.306]]
 fc_nn2 = [[-22.19684176 ,    7.699687431],[ 7.699687431,   -13.306]]
 fc_nn3 = [[-8.860588573805234,    -0.000000000000000],[-0.000000000000000 ,  -26.642257254446765]]
 fc_nnn = [[0.1,0.0],[0.0,0.3]]
-V_info = np.array([-1.0, -0.1]) 
-V_info2 = np.array([-1.0, -1.05]) / 20.0
+V_info = [-1.0, -0.2]
+V_info2 = np.array(V_info)/1.2
+num_repeat = 31
 ###############################################################################
-FC = ForceConstant(3, 3)
+FC_edge = ForceConstant(3, 4)
 
-FC.set_geometry(lat, orb, mass)
-FC.set_hopping(0,1,[0.0,0.0,0.0],V_info)
-FC.set_hopping(0,1,[1.0,0.0,0.0],V_info)
-FC.set_hopping(0,1,[1.0,1.0,0.0],V_info)
+FC_edge.set_geometry(lat, orb, mass)
 
-FC.set_hopping(0,2,[0.0,0.0,0.0],V_info)
-FC.set_hopping(0,2,[1.0,0.0,0.0],V_info)
-FC.set_hopping(0,2,[1.0,1.0,0.0],V_info)
+FC_edge.set_hopping(0,2,[0.0,0.0,0.0],V_info)
+FC_edge.set_hopping(0,2,[1.0,0.0,0.0],V_info)
 
-#FC.set_hopping(0,1,[0.0,1.0,0.0],V_info2)
-#FC.set_hopping(0,1,[0.0,-1.0,0.0],V_info2)
-#FC.set_hopping(0,1,[2.0,1.0,0.0],V_info2)
-#
-#FC.set_hopping(0,2,[0.0,1.0,0.0],V_info2)
-#FC.set_hopping(0,2,[0.0,-1.0,0.0],V_info2)
-#FC.set_hopping(0,2,[2.0,1.0,0.0],V_info2)
+FC_edge.set_hopping(0,3,[0.0,1.0,0.0],V_info2)
 
+FC_edge.set_hopping(1,2,[0.0,0.0,0.0],V_info2)
+
+FC_edge.set_hopping(1,3,[0.0,0.0,0.0],V_info)
+FC_edge.set_hopping(1,3,[-1.0,0.0,0.0],V_info)
 #FC_dice.set_hopping(0,0,[0.0,0.0],V_info_hex2)
 #FC_dice.set_hopping(1,1,[0.0,0.0],V_info_hex2)
 
@@ -55,19 +49,26 @@ FC.set_hopping(0,2,[1.0,1.0,0.0],V_info)
 #FC_dice.set_hopping(0,0,[-1.0,0.0],V_info2_           hex)
 #FC_dice.set_hopping(0,0,[1.0,1.0],V_info2_hex)
 #FC_dice.set_hopping(0,0,[0.0,-1.0],V_info2_hex)
+FC_edge.make_edge(num_repeat,0)
+FC_edge.set_acoustic_sum_rule()
 
-FC.set_acoustic_sum_rule()
+
 #FC_dice.set_acoustic_sum_rule()
 
-FC.print_info()
-
+FC_edge.print_info()
 
 ###############################################################################
-alpha0 = [[0.0,0.0,0.02]]
-alpha3 = [[0.0,0.0,0.00],[0.0,0.0,0.05],[0.0,0.0,0.05]]
-q_path = [[0, 0, 0.0], [0.5, 0.0, 0.0], [1.0/3, 1.0/3, 0.0], [0.0, 0, 0.0]]
+alpha0 = [[0.0,0.0, 0.05]]
+alpha4 = [[0.0,0.0,0.0],[0.0,0.0,-0.0],[0.0,0.0,0.04],[0.0,0.0,-0.04]]
+alpha4_edge = []
+for i in range(len(alpha4)):
+	for j in range(num_repeat):
+		alpha4_edge.append(alpha4[i])
+
+q_path_edge = [[0.0, -0.5, 0.0], [0.0, 0.0, 0.0], [0.0, .5, 0.0]]
 
 q_spacing = 100
+q_spacing_edge = 40
 
 
 q_grid = ['slice',[51, 51, 1], 0.0]  #### [q_slice mode, [nx, ny, nz], fixed_qpoints]
@@ -76,22 +77,11 @@ q_path_Kp = [[2.0/3+0.01,-1.0/3-0.01],[2.0/3+0.01,-1.0/3+0.01],[2.0/3-0.01,-1.0/
 q_path_X = [[1.0/2+0.0001,0.0/2-0.0001],[1.0/2+0.0001,0.0/2+0.0001],[1.0/2-0.0001,0.0/2+0.0001],[1.0/2-0.0001,0.0/2-0.0001],[1.0/2+0.0001,0.0/2-0.0001]]
 q_grid_berry_K = ['berryphase', q_path_K, 50]
 q_grid_berry_X = ['berryphase', q_path_X, 50]
-print FC.recip_vec
-#q_grid = ['berrycurv', [-2.5471742, 2.5471742], [-1.47061171, 1.47061171], [2, 0.0], 201, 201]
 
 ###############################################################################
-DM = DynamicalMatrix('2H_test', FC ,alpha0)
+DM_edge = DynamicalMatrix('BP_edge_test', FC_edge, alpha0)
+#DM_hex_edge = DynamicalMatrix('hexagonal_edge_test', FC_hex_edge.dimension, FC_hex_edge.num_atom, FC_hex_edge.latt_vec,FC_hex_edge.atom_pos,FC_hex_edge.atom_mas,FC_hex_edge.fc_info,alpha0)
 
-
-DM.get_phonon_band(q_path,q_spacing)
-DM.draw_phonon_band()
-#DM.make_phband_PROCAR_format(q_grid)
-#DM.get_3Dplot_data(14)
-
-
-###############################################################################
-band_range = [int(i) for i in range(9,18)] ; print '# of bands = ' + str(len(band_range)) + ' Detail bands = ' + str(band_range)
-#CTI = ComputeTopologicalInvariants('2H_test',band_range, q_grid)
-#CTI.get_Willsons_loop()
-#CTI_hex.calculate_Berry_phase()
-
+DM_edge.get_phonon_band(q_path_edge,q_spacing_edge)
+#DM_hex_edge.draw_phonon_band()
+DM_edge.draw_phonon_band_edge_projection()
