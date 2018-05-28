@@ -885,23 +885,42 @@ class DynamicalMatrix:
     
         return 0
 
+    def _set_cell_oriented(self):
+        self._angles = get_angles(self.latt_vec)
+        self._cell_params = get_cell_parameters(self.latt_vec)
+        a, b, c = self._cell_params
+        alpha, beta, gamma = self._angles
+        #print alpha, beta, gamma, a, b, c
+        self._lattice_oriented = get_cell_matrix(a, b, c, alpha, beta, gamma)
+        self._positions_oriented = self._get_oriented_displacements(np.dot(self.atom_pos, self.latt_vec))
+        return 0
+    
+    def _get_oriented_displacements(self, vec_cartesian):
+        return np.dot(np.dot(vec_cartesian, np.linalg.inv(self.latt_vec)), self._lattice_oriented)
+    
+
     def make_anime_file_for_vsim(self, q_point):
         if self.dimension == 2:
             print 'Error: current version only supports 3-dim case'
             return 0
+        self._set_cell_oriented()
+        lat_oriented = self._lattice_oriented
+        pos_oriented = self._positions_oriented
+
         filename ='anime_'+self.out_tag+'.ascii'
         f = open(filename, 'w')
         f.write('# PhononTB generated file for v_sim 3.6'+'\n')
 
-        templine = '   '+str(self.latt_vec[0][0]) + '\t' +str(self.latt_vec[1][0]) + '\t' +str(self.latt_vec[1][1]) + '\n'
+        templine = '   '+str(lat_oriented[0][0]) + '\t' +str(lat_oriented[1][0]) + '\t' +str(lat_oriented[1][1]) + '\n'
         f.write(templine)
-        templine = '   '+str(self.latt_vec[2][0]) + '\t' +str(self.latt_vec[2][1]) + '\t' +str(self.latt_vec[2][2]) + '\n'
+        templine = '   '+str(lat_oriented[2][0]) + '\t' +str(lat_oriented[2][1]) + '\t' +str(lat_oriented[2][2]) + '\n'
         f.write(templine)
 
         real_atom_pos = np.dot(self.latt_vec.transpose(), np.array(self.atom_pos).transpose()).transpose()
+        #print real_atom_pos
 
         for i in range(self.num_atom):
-            templine = '   '+str(real_atom_pos[i][0]) + '\t' +str(real_atom_pos[i][1]) + '\t' +str(real_atom_pos[i][2]) + '\t' + 'A' + '\n'
+            templine = '   '+str(pos_oriented[i][0]) + '\t' +str(pos_oriented[i][1]) + '\t' +str(pos_oriented[i][2]) + '\t' + 'A' + '\n'
             f.write(templine)    
         
 
@@ -909,12 +928,8 @@ class DynamicalMatrix:
         dyn = self.construct_dynamicalmatrix_q(q_vec)
         modified_dyn = self.DM_spectral_decomposition(dyn)
         modified_dyn = self.make_phTB_H_ver2(modified_dyn)
-        #print dyn - dyn.conj().transpose()
-        #modified_dyn = transform_H_for_u(modified_dyn,num_atom, latt_vec, atom_pos, recip_vec, q_vec, dimension)
-        #print modified_dyn[6][6]
-        #w1 = (np.linalg.eigvalsh(modified_dyn).real) *vasp2THZ
         w1, v1 = np.linalg.eigh(modified_dyn)
-        print np.linalg.norm(v1[:,17])
+        #print np.linalg.norm(v1[:,17])
     
         #w2 = np.linalg.eigvalsh(dyn).real
         #w = refine_frequency(w2)*vasp2THZ
@@ -925,9 +940,9 @@ class DynamicalMatrix:
             f.write(templine_start)
             for j in range(self.num_atom):
                 index = j 
-                real_part_x, imag_part_x = np.real(v1[:,i][index + 0]), np.imag(v1[:,i][index + 0])
-                real_part_y, imag_part_y = np.real(v1[:,i][index + 1]), np.imag(v1[:,i][index + 1])
-                real_part_z, imag_part_z = np.real(v1[:,i][index + 2]), np.imag(v1[:,i][index + 2])
+                real_part_x, imag_part_x = np.real(v1[:,i][3*index + 0]), np.imag(v1[:,i][3*index + 0])
+                real_part_y, imag_part_y = np.real(v1[:,i][3*index + 1]), np.imag(v1[:,i][3*index + 1])
+                real_part_z, imag_part_z = np.real(v1[:,i][3*index + 2]), np.imag(v1[:,i][3*index + 2])
                 templine = '#; ' + str(real_part_x) + '; ' + str(real_part_y) + '; ' + str(real_part_z) + '; ' + str(imag_part_x) + '; ' + str(imag_part_y) + '; ' + str(imag_part_z) + '; ' +' \\' + '\n'
                 f.write(templine)
             templine_end = '# ]' + '\n'
@@ -1158,377 +1173,38 @@ class ComputeTopologicalInvariants:
         print 'Berry phase is ' + str(berry)
         return 0
 
+###########################################################################
+def get_angles(lattice):
+    a, b, c = get_cell_parameters(lattice)
+    alpha = np.arccos(np.vdot(lattice[1], lattice[2]) / b / c) / np.pi * 180
+    beta  = np.arccos(np.vdot(lattice[2], lattice[0]) / c / a) / np.pi * 180
+    gamma = np.arccos(np.vdot(lattice[0], lattice[1]) / a / b) / np.pi * 180
+    return alpha, beta, gamma
 
-#class make_edge(ForceConstant):
-#    return 0                                                   
+def get_cell_parameters(lattice):
+    return np.sqrt(np.dot (lattice, lattice.transpose()).diagonal())
 
-if __name__ == "__main__": 
-    #lat=[[1.0,0.0],[0.5,np.sqrt(3.0)/2.0]]
-    #orb=[[1./3.,1./3.],[2./3.,2./3.]]
-    lat_hex = [[1.2333638807431999,   -2.1362489056675500], [1.2333638807431999,   2.1362489056675500]]
-    orb_hex = [[1.0/3, 2.0/3], [2.0/3, 1.0/3]]
-    lat_hex_bilayer = [[1.2333638807431999,   -2.1362489056675500, 0.0], [1.2333638807431999,   2.1362489056675500, 0.0], [0.0,0.0,15.0]]
-    orb_hex_bilayer = [[0.5000000000000000,  0.5000000000000000,  0.3919019252748578], [0.8333340000000007 , 0.1666659999999993,  0.3918741643673117], [0.1666669999999968,  0.8333330000000032 , 0.6081258356326885], [0.5000000000000000,  0.5000000000000000 , 0.6080963917251414]]
-    lat_hex_tetralayer = [[1.2333638807431999,   -2.1362489056675500, 0.0], [1.2333638807431999,   2.1362489056675500, 0.0], [0.0,0.0,15.0]]
-    orb_hex_tetralayer = [[1.0/2, 1.0/2, 0.30557], [5.0/6, 1.0/6, 0.30555], [1.0/6, 5.0/6, 0.43391], [1./2, 1./2, 0.43390], [1./2, 1./2, 0.56174], [5.0/6, 1.0/6, 0.56173], [1.0/6, 5.0/6, 0.69085], [1./2, 1./2, 0.69084]]
-    lat_hex2 = [[2.46078336040973,   0.0], [0.0,   4.26220180664973]]
-    orb_hex2 = [[0.5, 0.1666], [0.0, 0.3333], [0.0, 0.66666], [0.5, 0.833333]]
-    lat_rec = [[2.46673,   0.0], [0.0,   2.46673]]
-    orb_rec = [[0.0, 0.0], [1.0/2, 1.0/2]]
-    lat_rec2 = [[2.60420000000000,   0.0], [0.0,   5.20840000000000]]
-    orb_rec2 = [[0.0, 0.0], [0.0/2, 1.0/2]]
-    lat_kagome = [[2.0,  0.0], [-1.0,  np.sqrt(3)]]
-    orb_kagome = [[0.5,0.0], [0.0,0.5], [0.5,0.5]]
-    lat_lieb = [[3.09755486537347,   0.00000000000000 ], [0.00000000000000 ,  3.09755486537347]]
-    orb_lieb = [[0.0,0.0], [0.0,0.5], [0.5,0.0]]
-    mass_hex = [12.0, 12.0]
-    mass_hex2 = [12.0, 12.0, 12.0, 12.0]
-    mass_hex_bilayer = [12.0, 12.0, 12.0, 12.0]
-    mass_hex_tetralayer = [12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0]
-    mass_rec = [12.0, 14.0]
-    mass_rec2 = [12.0, 12.0]
-    mass_kagome = [12.0, 12.0, 12.0]
-    mass_lieb = [12.0, 12.0, 12.0]
-    fc_nn  =  [[-1.0,0.0],[0.0,-1.0]]
-    fc_nn1 = [[-22.19684176,   -7.699687431],[-7.699687431,   -13.306]]
-    fc_nn2 = [[-22.19684176 ,    7.699687431],[ 7.699687431,   -13.306]]
-    fc_nn3 = [[-8.860588573805234,    -0.000000000000000],[-0.000000000000000 ,  -26.642257254446765]]
-    fc_nnn = [[0.1,0.0],[0.0,0.3]]
-    V_info_hex = [-1.0, -0.2]
-    V_info_rec = [-1.0, -0.2]
-    V_info_rec2 = [-1.0, -0.5]
-    v_info_kagome = [-1.0, -0.2]
-    v_info_lieb = [-1.0, -0.6]
-    V_info_hex_inter = np.array([-1.0, -1.0]) / 50.0
-    v_info_lieb2 = np.array(v_info_lieb)/ 4.0
-    V_info_rec22 = np.array(V_info_rec2) / 1.2
-    V_info_rec33 = np.array(V_info_rec2) / 10.0
-    V_info2_hex = np.array(V_info_hex) / 10.0
-    V_info2_rec = np.array(V_info_rec) / 2.0
-    #print fc_nn[1][0]
-
-    ###############################################################################
-    FC_hex = ForceConstant(2, 2)
-    FC_hex_edge = ForceConstant(2, 2)
-    FC_hex_bilayer = ForceConstant(3, 4)
-    FC_hex_tetralayer = ForceConstant(3, 8)
-    FC_hex2 = ForceConstant(2, 4)
-    FC_rec = ForceConstant(2, 2)
-    FC_rec2 = ForceConstant(2, 2)
-    FC_kagome = ForceConstant(2, 3)
-    FC_lieb = ForceConstant(2, 3)
-
-    FC_hex.set_geometry(lat_hex, orb_hex, mass_hex)
-    FC_hex.set_hopping(0,1,[0.0,0.0],V_info_hex)
-    FC_hex.set_hopping(0,1,[-1.0,0.0],V_info_hex)
-    FC_hex.set_hopping(0,1,[0.0,1.0],V_info_hex)
-
-    #FC_hex.set_hopping(1,1,[-1.0,-1.0],V_info2_hex)
-    #FC_hex.set_hopping(1,1,[0.0,1.0],V_info2_hex)
-    #FC_hex.set_hopping(1,1,[1.0,0.0],V_info2_hex)
-    #FC_hex.set_hopping(0,0,[-1.0,0.0],V_info2_           hex)
-    #FC_hex.set_hopping(0,0,[1.0,1.0],V_info2_hex)
-    #FC_hex.set_hopping(0,0,[0.0,-1.0],V_info2_hex)
-
-    FC_hex.set_acoustic_sum_rule()
+def get_cell_matrix(a, b, c, alpha, beta, gamma):
+    # These follow 'matrix_lattice_init' in matrix.c of GDIS
+    alpha *= np.pi / 180
+    beta *= np.pi / 180
+    gamma *= np.pi / 180
+    a1 = a
+    a2 = 0.0
+    a3 = 0.0
+    b1 = np.cos(gamma)
+    b2 = np.sin(gamma)
+    b3 = 0.0
+    c1 = np.cos(beta)
+    c2 = (2 * np.cos(alpha) + b1**2 + b2**2 - 2 * b1 * c1 - 1) / (2 * b2)
+    c3 = np.sqrt(1 - c1**2 - c2**2)
+    lattice = np.zeros((3, 3), dtype='double')
+    lattice[0, 0] = a
+    lattice[1] = np.array([b1, b2, b3]) * b
+    lattice[2] = np.array([c1, c2, c3]) * c
+    return lattice                                  
+###########################################################################
 
 
-    FC_hex_edge.set_geometry(lat_hex, orb_hex, mass_hex)
-    FC_hex_edge.set_hopping(0,1,[0.0,0.0],V_info_hex)
-    FC_hex_edge.set_hopping(0,1,[-1.0,0.0],V_info_hex)
-    FC_hex_edge.set_hopping(0,1,[0.0,1.0],V_info_hex)
-
-    FC_hex_edge.set_acoustic_sum_rule()
-
-    FC_hex_edge.make_edge(20,0)
-
-    
-
-    FC_hex_edge.print_info()
-    
-
-    FC_hex_bilayer.set_geometry(lat_hex_bilayer, orb_hex_bilayer, mass_hex_bilayer)
-
-    FC_hex_bilayer.set_hopping(0,1,[0.0,0.0,0.0],V_info_hex)
-    FC_hex_bilayer.set_hopping(0,1,[0.0,1.0,0.0],V_info_hex)
-    FC_hex_bilayer.set_hopping(0,1,[-1.0,0.0,0.0],V_info_hex)
-
-    FC_hex_bilayer.set_hopping(2,3,[0.0,0.0,0.0],V_info_hex)
-    FC_hex_bilayer.set_hopping(2,3,[0.0,1.0,0.0],V_info_hex)
-    FC_hex_bilayer.set_hopping(2,3,[-1.0,0.0,0.0],V_info_hex)
-
-    FC_hex_bilayer.set_hopping(0,2,[0.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_bilayer.set_hopping(0,2,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_bilayer.set_hopping(0,2,[1.0,0.0,0.0],V_info_hex_inter)
-
-    FC_hex_bilayer.set_hopping(0,3,[0.0,0.0,0.0],V_info_hex_inter)
-
-    FC_hex_bilayer.set_hopping(1,2,[1.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_bilayer.set_hopping(1,2,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_bilayer.set_hopping(1,2,[1.0,-1.0,0.0],V_info_hex_inter)
-
-    FC_hex_bilayer.set_hopping(1,3,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_bilayer.set_hopping(1,3,[1.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_bilayer.set_hopping(1,3,[0.0,0.0,0.0],V_info_hex_inter)
-
-
-
-    FC_hex_bilayer.set_acoustic_sum_rule()
-
-
-    FC_hex_tetralayer.set_geometry(lat_hex_tetralayer, orb_hex_tetralayer, mass_hex_tetralayer)
-
-    FC_hex_tetralayer.set_hopping(0,1,[0.0,0.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(0,1,[0.0,1.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(0,1,[-1.0,0.0,0.0],V_info_hex)
-
-    FC_hex_tetralayer.set_hopping(2,3,[0.0,0.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(2,3,[0.0,1.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(2,3,[-1.0,0.0,0.0],V_info_hex)
-
-    FC_hex_tetralayer.set_hopping(4,5,[0.0,0.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(4,5,[0.0,1.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(4,5,[-1.0,0.0,0.0],V_info_hex)
-
-    FC_hex_tetralayer.set_hopping(6,7,[0.0,0.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(6,7,[0.0,1.0,0.0],V_info_hex)
-    FC_hex_tetralayer.set_hopping(6,7,[-1.0,0.0,0.0],V_info_hex)
-
-    FC_hex_tetralayer.set_hopping(0,2,[0.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(0,2,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(0,2,[1.0,0.0,0.0],V_info_hex_inter)
-#
-    FC_hex_tetralayer.set_hopping(0,3,[0.0,0.0,0.0],V_info_hex_inter)
-    #
-    FC_hex_tetralayer.set_hopping(1,2,[1.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(1,2,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(1,2,[1.0,-1.0,0.0],V_info_hex_inter)
-    #
-    FC_hex_tetralayer.set_hopping(1,3,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(1,3,[1.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(1,3,[0.0,0.0,0.0],V_info_hex_inter)
-
-    FC_hex_tetralayer.set_hopping(3,5,[0.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(3,5,[0.0,1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(3,5,[-1.0,0.0,0.0],V_info_hex_inter)
-#
-    FC_hex_tetralayer.set_hopping(3,4,[0.0,0.0,0.0],V_info_hex_inter)
-    #
-    FC_hex_tetralayer.set_hopping(2,4,[0.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(2,4,[0.0,1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(2,4,[-1.0,0.0,0.0],V_info_hex_inter)
-
-    FC_hex_tetralayer.set_hopping(2,5,[0.0,1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(2,5,[-1.0,1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(2,5,[-1.0,0.0,0.0],V_info_hex_inter)
-
-
-    FC_hex_tetralayer.set_hopping(4,6,[0.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(4,6,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(4,6,[1.0,0.0,0.0],V_info_hex_inter)
-    #
-    FC_hex_tetralayer.set_hopping(4,7,[0.0,0.0,0.0],V_info_hex_inter)
-    #
-    FC_hex_tetralayer.set_hopping(5,6,[1.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(5,6,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(5,6,[1.0,-1.0,0.0],V_info_hex_inter)
-    #
-    FC_hex_tetralayer.set_hopping(5,7,[0.0,-1.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(5,7,[1.0,0.0,0.0],V_info_hex_inter)
-    FC_hex_tetralayer.set_hopping(5,7,[0.0,0.0,0.0],V_info_hex_inter)
-
-
-    FC_hex_tetralayer.set_acoustic_sum_rule()
-
-#
-    #FC_hex2.set_geometry(lat_hex2, orb_hex2, mass_hex2)
-    #FC_hex2.set_hopping(0,1,[0.0,0.0],V_info_hex)
-    #FC_hex2.set_hopping(0,1,[0.0,1.0],V_info_hex)
-#
-    #FC_hex2.set_hopping(0,3,[0.0,-1.0],V_info_hex)
-#
-    #FC_hex2.set_hopping(1,2,[0.0,0.0],V_info_hex)
-#
-    #FC_hex2.set_hopping(2,3,[0.0,0.0],V_info_hex)
-    #FC_hex2.set_hopping(2,3,[-1.0,0.0],V_info_hex)
-
-
-
-
-    #FC_hex2.set_acoustic_sum_rule()
-    #
-#
-#
-    FC_rec.set_geometry(lat_rec, orb_rec, mass_rec)
-    FC_rec.set_hopping(0,1,[0.0, 0.0],V_info_rec)
-    FC_rec.set_hopping(0,1,[0.0,-1.0],V_info_rec)
-    FC_rec.set_hopping(0,1,[-1.0,-1.0],V_info_rec)
-    FC_rec.set_hopping(0,1,[-1.0,0.0],V_info_rec)
-    #
-    #FC_rec.set_hopping(0,0,[1.0,0.0],V_info2_rec)
-    #FC_rec.set_hopping(0,0,[0.0,1.0],V_info2_rec)
-    #FC_rec.set_hopping(0,0,[-1.0,0.0],V_info2_rec)
-    #FC_rec.set_hopping(0,0,[0.0,-1.0],V_info2_rec)
-#
-    #FC_rec.set_hopping(1,1,[1.0,0.0],V_info2_rec)
-    #FC_rec.set_hopping(1,1,[0.0,1.0],V_info2_rec)
-    #FC_rec.set_hopping(1,1,[-1.0,0.0],V_info2_rec)
-    #FC_rec.set_hopping(1,1,[0.0,-1.0],V_info2_rec)
-#
-#
-    FC_rec.set_acoustic_sum_rule()
-#
-    #FC_rec2.set_geometry(lat_rec2, orb_rec2, mass_rec2)
-    #FC_rec2.set_hopping(0,0,[1.0, 0.0],V_info_rec2)
-    #FC_rec2.set_hopping(0,0,[-1.0,0.0],V_info_rec2)
-#
-    #FC_rec2.set_hopping(1,1,[1.0, 0.0],V_info_rec2)
-    #FC_rec2.set_hopping(1,1,[-1.0,0.0],V_info_rec2)
-#
-    #FC_rec2.set_hopping(0,1,[0.0,0.0],V_info_rec22)
-    #FC_rec2.set_hopping(0,1,[0.0,-1.0],V_info_rec22)
-
-
-    #FC_rec2.set_hopping(0,1,[1.0,0.0],V_info_rec33)
-    #FC_rec2.set_hopping(0,1,[-1.0,0.0],V_info_rec33)
-    #FC_rec2.set_hopping(0,1,[1.0,-1.0],V_info_rec33)
-    #FC_rec2.set_hopping(0,1,[-1.0,-1.0],V_info_rec33)
-    
-    #FC_rec2.set_hopping(1,0,[1.0,0.0],V_info_rec33)
-    #FC_rec2.set_hopping(1,0,[-1.0,0.0],V_info_rec33)
-    #FC_rec2.set_hopping(1,0,[1.0,1.0],V_info_rec33)
-    #FC_rec2.set_hopping(1,0,[-1.0,1.0],V_info_rec33)
-
-    #FC_rec2.set_acoustic_sum_rule()
-#
-#
-    FC_kagome.set_geometry(lat_kagome, orb_kagome, mass_kagome)
-#
-    FC_kagome.set_hopping(0,1,[1.0, 0.0],v_info_kagome)
-    FC_kagome.set_hopping(0,1,[0.0, -1.0],v_info_kagome)
-#
-    FC_kagome.set_hopping(0,2,[0.0, 0.0],v_info_kagome) 
-    FC_kagome.set_hopping(0,2,[0.0, -1.0],v_info_kagome) 
-    
-    FC_kagome.set_hopping(1,2,[0.0, 0.0],v_info_kagome) 
-    FC_kagome.set_hopping(1,2,[-1.0, 0.0],v_info_kagome) 
-#
-    FC_kagome.set_acoustic_sum_rule()
-#
-#
-    FC_lieb.set_geometry(lat_lieb, orb_lieb, mass_lieb)
-#
-    FC_lieb.set_hopping(0,1,[0.0, 0.0],v_info_lieb)
-    FC_lieb.set_hopping(0,1,[0.0, -1.0],v_info_lieb)
-#
-    FC_lieb.set_hopping(0,2,[0.0, 0.0],v_info_lieb) 
-    FC_lieb.set_hopping(0,2,[-1.0, 0.0],v_info_lieb) 
-    #
-    FC_lieb.set_hopping(1,2,[0.0, 0.0],v_info_lieb2) 
-    FC_lieb.set_hopping(1,2,[0.0, 1.0],v_info_lieb2) 
-    FC_lieb.set_hopping(1,2,[-1.0, 0.0],v_info_lieb2) 
-    FC_lieb.set_hopping(1,2,[-1.0, 1.0],v_info_lieb2) 
-    FC_lieb.set_acoustic_sum_rule()
-
-    #FC_rec.print_info()
-    ###############################################################################
-    alpha0 = [[0.0,0.0,0.0]]
-    alpha2 = [[0.0,0.0,0.01],[0.0,0.0,0.01]]
-    alpha3 = [[0.0,0.0,0.01],[0.0,0.0,0.01],[0.0,0.0,0.01]]
-    alpha4 = [[0.0,0.0,0.01],[0.0,0.0,0.01],[0.0,0.0,-0.01],[0.0,0.0,-0.01]]
-    alpha8 = [[0.0,0.0,0.01],[0.0,0.0,0.01],[0.0,0.0,-0.01],[0.0,0.0,-0.01],[0.0,0.0,0.01],[0.0,0.0,0.01],[0.0,0.0,-0.01],[0.0,0.0,-0.01]]
-    #q_path = [[0, 0], [1.0/2,0.0], [1.0/3, 1.0/3], [0, 0]]
-    q_path_hex = [[0, 0], [0.5, 0.0], [1.0/3, 1.0/3], [0.0, 0]]
-    q_path_hex_edge = [[0.0, -0.5], [0.0/3, .0/2], [0.0, 0.5]]
-    q_path_hex_bilayer = [[0, 0,0], [0.5, 0.0,0], [1.0/3, 1.0/3,0], [0.0, 0,0]]
-    q_path_rec = [[0.5, 0.5], [0, 0], [1.0/2, 0.0], [0.5, 0.5], [0.0, 0.5], [0, 0] ,[-0.5, 0]]
-    q_path_rec2 = [[0.0, 0.0], [1.0/2, 0], [1.0/2, 1.0/2], [0, 1.0/2], [0.0, 0.0]]
-    q_path_kagome = [[0, 0], [0.5, 0.0], [1.0/3, 1.0/3], [0.0, 0]]
-    q_path_lieb = [[0, 0], [0.0, 0.5], [1.0/2, 1.0/2], [0.0, 0]]
-    q_spacing = 100
-    q_spacing_edge = 20
-
-
-    q_grid = ['slice',[51, 51, 1], 0.0]  #### [q_slice mode, [nx, ny, nz], fixed_qpoints]
-    q_path_K = [[1.0/3+0.01,1.0/3-0.01],[1.0/3+0.01,1.0/3+0.01],[1.0/3-0.01,1.0/3+0.01],[1.0/3-0.01,1.0/3-0.01],[1.0/3+0.01,1.0/3-0.01]]
-    q_path_Kp = [[2.0/3+0.01,-1.0/3-0.01],[2.0/3+0.01,-1.0/3+0.01],[2.0/3-0.01,-1.0/3+0.01],[2.0/3-0.01,-1.0/3-0.01],[2.0/3+0.01,-1.0/3-0.01]]
-    q_path_X = [[1.0/2+0.0001,0.0/2-0.0001],[1.0/2+0.0001,0.0/2+0.0001],[1.0/2-0.0001,0.0/2+0.0001],[1.0/2-0.0001,0.0/2-0.0001],[1.0/2+0.0001,0.0/2-0.0001]]
-    q_grid_berry_K = ['berryphase', q_path_K, 50]
-    q_grid_berry_X = ['berryphase', q_path_X, 50]
-
-    ###############################################################################
-    DM_hex = DynamicalMatrix('hexagonal_test', 2, 2, lat_hex,orb_hex,mass_hex,FC_hex.fc_info,alpha0)
-    DM_hex_edge = DynamicalMatrix('hexagonal_edge_test', FC_hex_edge.dimension, FC_hex_edge.num_atom, FC_hex_edge.latt_vec,FC_hex_edge.atom_pos,FC_hex_edge.atom_mas,FC_hex_edge.fc_info,alpha0)
-    DM_hex2 = DynamicalMatrix('hexagonal_test2', 2, 4, lat_hex2,orb_hex2,mass_hex2,FC_hex2.fc_info,alpha0)
-    DM_hex_bilayer = DynamicalMatrix('hexagonal_bilayer', 3, 4, lat_hex_bilayer,orb_hex_bilayer,mass_hex_bilayer,FC_hex_bilayer.fc_info,alpha4)
-    DM_hex_tetralayer = DynamicalMatrix('hexagonal_tetralayer', 3, 8, lat_hex_tetralayer,orb_hex_tetralayer,mass_hex_tetralayer,FC_hex_tetralayer.fc_info,alpha0)
-    DM_rec = DynamicalMatrix('rectangular_test', 2, 2, lat_rec,orb_rec,mass_rec,FC_rec.fc_info,alpha2)
-    DM_rec2 = DynamicalMatrix('rectangular_test2', 2, 2, lat_rec2,orb_rec2,mass_rec2,FC_rec2.fc_info,alpha2)
-    DM_kagome = DynamicalMatrix('kagome_test', 2, 3, lat_kagome,orb_kagome,mass_kagome,FC_kagome.fc_info,alpha3)
-    DM_lieb = DynamicalMatrix('lieb_test', 2, 3, lat_lieb,orb_lieb,mass_lieb,FC_lieb.fc_info,alpha0)
-    #print DM.obtain_qpath(q_path, q_spacing)[2]
-    #A = np.sqrt(np.linalg.eigh(DM.construct_dynamicalmatrix_q([0.5,0.0]))[0])*15.633302
-    #print A[2] - A[1]
-    #DM_rec.get_phonon_band(q_path_rec,q_spacing)
-    #DM_rec.draw_phonon_band()
-    #DM_rec.make_phband_PROCAR_format(q_grid)
-
-    #DM_rec2.get_phonon_band(q_path_rec2,q_spacing)
-    #DM_rec2.draw_phonon_band()
-    #DM_rec2.make_phband_PROCAR_format(q_grid)
-
-    DM_hex.get_phonon_band(q_path_hex_edge,q_spacing)
-    DM_hex.draw_phonon_band()
-    #DM_hex.make_phband_PROCAR_format(q_grid)
-
-    DM_hex_edge.get_phonon_band(q_path_hex_edge,q_spacing_edge)
-    DM_hex_edge.draw_phonon_band()
-    #DM_hex.make_phband_PROCAR_format(q_grid)
-
-    #DM_hex2.get_phonon_band(q_path_rec2,q_spacing)
-    #DM_hex2.draw_phonon_band()
-    #DM_hex.make_phband_PROCAR_format(q_grid)
-
-    #DM_hex_bilayer.get_phonon_band(q_path_hex_bilayer,q_spacing)
-    #DM_hex_bilayer.draw_phonon_band()
-    #DM_hex_bilayer.make_phband_PROCAR_format(q_grid)
-
-    #DM_hex_tetralayer.get_phonon_band(q_path_hex_bilayer,q_spacing)
-    #DM_hex_tetralayer.draw_phonon_band()
-    #DM_hex_tetralayer.make_phband_PROCAR_format(q_grid)
-
-    #DM_kagome.get_phonon_band(q_path_kagome,q_spacing)
-    #DM_kagome.draw_phonon_band()
-    #DM_kagome.make_phband_PROCAR_format(q_grid)
-
-    #DM_lieb.get_phonon_band(q_path_lieb,q_spacing)
-    #DM_lieb.draw_phonon_band()
-    #DM_lieb.make_phband_PROCAR_format(q_grid)
-
-    ###############################################################################
-    #band_range = [int(i) for i in range(4,6)] ; print '# of bands = ' + str(len(band_range)) + ' Detail bands = ' + str(band_range)
-    #CTI_hex = ComputeTopologicalInvariants('hexagonal_test',band_range, q_grid)
-    #CTI_hex.get_Willsons_loop()
-    #CTI_hex.calculate_Berry_phase()
-
-    #CTI_hex_bilayer = ComputeTopologicalInvariants('hexagonal_bilayer',band_range, q_grid)
-    #CTI_hex_bilayer.get_Willsons_loop()
-    #CTI_hex.calculate_Berry_phase()
-
-    #CTI_hex_tetralayer = ComputeTopologicalInvariants('hexagonal_tetralayer',band_range, q_grid)
-    #CTI_hex_tetralayer.get_Willsons_loop()
-
-
-    #CTI_kagome = ComputeTopologicalInvariants('kagome_test',band_range, q_grid)
-    #CTI_kagome.get_Willsons_loop()   
-
-    #CTI_rec = ComputeTopologicalInvariants('rectangular_test',band_range, q_grid)
-    #CTI_rec.get_Willsons_loop()
-    #CTI_rec.calculate_Berry_phase()
-
-    #CTI_rec2 = ComputeTopologicalInvariants('rectangular_test2',band_range, q_grid)
-    #CTI_rec2.get_Willsons_loop()
-    #CTI_rec2.calculate_Berry_phase()
-
-    #CTI_lieb = ComputeTopologicalInvariants('lieb_test',band_range, q_grid)
-    #CTI_lieb.get_Willsons_loop()
+if __name__ == "__main__":
+    FC_test =  ForceConstant(3, 3)
