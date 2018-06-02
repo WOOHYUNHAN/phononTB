@@ -7,7 +7,7 @@
 1. To be implemented: Read FC, Non-equilibrium Green Function (NEGF), phonon-phonon interactions
 1. Under development, Not released verison (contact info : hanwooh@gmail.com or hanwooh@kaist.ac.kr)
 
-## history
+## History
 
 1. ~2018.2: construct TB model & topological quantities
 2. 2018.4: Edge states
