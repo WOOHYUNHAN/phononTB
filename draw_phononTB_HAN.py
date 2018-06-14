@@ -10,9 +10,15 @@ from matplotlib.collections import LineCollection
 import matplotlib.cm as cm
 #from numeric import *
 
-class compatible_other_calculators:
+class Read_FC_from_other_calculators:
     def __init__(self, calculator):
-        self.calculator = calculator # phononpy and QE
+        self.calculator = calculator # phononpy and DFPT in QE
+            if self.calculator == "PHONOPY":
+            self.version = 'xx.xx.x.x.'
+
+    def read_FC_from_phonopy(self):
+        
+
 
 
 class ForceConstant:
