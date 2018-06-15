@@ -12,12 +12,217 @@ import matplotlib.cm as cm
 
 class Read_FC_from_other_calculators:
     def __init__(self, calculator):
+        self.information = []
         self.calculator = calculator # phononpy and DFPT in QE
-            if self.calculator == "PHONOPY":
-            self.version = 'xx.xx.x.x.'
+        if self.calculator == "PHONOPY" or self.calculator == "phonopy" or self.calculator == "Phonopy":
+            self.version = '1.12.6.53' # latest version, FORCE_CONSTANTS file depends on the version so please check
+    
+    def read_FC(self, FC_symmetry, supercell, mass, symprec, cutoff_distance):
+        if self.calculator == "PHONOPY" or self.calculator == "phonopy" or self.calculator == "Phonopy":
+            self.FC_symmetry = FC_symmetry ### True or False
+            self.supercell = supercell ### [2, 2, 2]
+            self.supercell_index = []
+            for i in range(self.supercell[2]):
+                for j in range(self.supercell[1]):
+                    for k in range(self.supercell[0]):
+                        self.supercell_index.append([k,j,i])
+            self.mass = mass
+            self.symprec = symprec ### default = 1e-4
+            self.cutoff_distance = cutoff_distance
+            self.read_FC_from_phonopy()
+        else:
+            # To be implemented
+            return 0
 
-    def read_FC_from_phonopy(self):
+    def read_POSCAR(self, POSCAR_file):
+        f = open(POSCAR_file, 'r')
+        tempf = f.readlines()
+        f.close()
+
+        univ_prim = float(tempf[1].split()[0])
+        a_prim = np.array([float(tempf[2].split()[i]) for i in range(3)]) * univ_prim
+        b_prim = np.array([float(tempf[3].split()[i]) for i in range(3)]) * univ_prim
+        c_prim = np.array([float(tempf[4].split()[i]) for i in range(3)]) * univ_prim
+
+
+        atom_type = np.array([str(tempf[5].split()[i]) for i in range(len(tempf[5].split()))])
+        num_type = np.array([int(tempf[6].split()[i]) for i in range(len(tempf[6].split()))])
+        total_num_atom = np.sum(num_type)
+
+        #print total_num_atom
+
+        if tempf[7][0] == 'D' or tempf[7][0] == 'd':
+            # Direct coordinates
+            mode = 'direct'
+        elif tempf[7][0] == 'C' or tempf[7][0] == 'c':
+            # Cartesian coordinates
+            mode = 'cart'
+        else:
+            # Starnge input?
+            print "POSCAR ERROR: please check direct or cartesian coordintes"
+            return 0
+
+        direct_coord = []
+
+        if mode == 'direct':
+            for i in range(total_num_atom):
+                tempcoord = np.array([float(tempf[8+i].split()[j]) for j in range(3)])
+                direct_coord.append(tempcoord)
+        elif mode == 'cart':
+            for i in range(total_num_atom):
+                tempcoord = np.array([float(tempf[8+i].split()[j]) for j in range(3)])
+                temp_direct_coord = from_cartesin_to_direct([a_prim, b_prim, c_prim], tempcoord)
+                direct_coord.append(temp_direct_coord)
+        else:
+            pass
+
+        self.latt_vec_prim = np.array([a_prim, b_prim, c_prim])
+        self.atom_type_prim = atom_type
+        self.num_type_prim = num_type
+        self.total_num_atom_prim = total_num_atom
+        self.direct_coord_prim = direct_coord
+
+    def read_SPOSCAR(self, SPOSCAR_file):
+        f = open(SPOSCAR_file, 'r')
+        tempf = f.readlines()
+        f.close()
+
+        univ_super = float(tempf[1].split()[0])
+        a_super = np.array([float(tempf[2].split()[i]) for i in range(3)]) * univ_super
+        b_super = np.array([float(tempf[3].split()[i]) for i in range(3)]) * univ_super
+        c_super = np.array([float(tempf[4].split()[i]) for i in range(3)]) * univ_super
+
+
+        num_type = np.array([int(tempf[5].split()[i]) for i in range(len(tempf[5].split()))])
+        total_num_atom = np.sum(num_type)
+
+        #print total_num_atom
+
+        if tempf[6][0] == 'D' or tempf[6][0] == 'd':
+            # Direct coordinates
+            mode = 'direct'
+        elif tempf[6][0] == 'C' or tempf[6][0] == 'c':
+            # Cartesian coordinates
+            mode = 'cart'
+        else:
+            # Starnge input?
+            print "POSCAR ERROR: please check direct or cartesian coordintes"
+            return 0
+
+        direct_coord = []
+
+        if mode == 'direct':
+            for i in range(total_num_atom):
+                tempcoord = np.array([float(tempf[7+i].split()[j]) for j in range(3)])
+                direct_coord.append(tempcoord)
+        elif mode == 'cart':
+            for i in range(total_num_atom):
+                tempcoord = np.array([float(tempf[7+i].split()[j]) for j in range(3)])
+                temp_direct_coord = from_cartesin_to_direct([a_super, b_super, c_super], tempcoord)
+                direct_coord.append(temp_direct_coord)
+        else:
+            pass
+
+        self.latt_vec_super = np.array([a_super, b_super, c_super])
+        self.total_num_atom_super = total_num_atom
+        self.direct_coord_super = direct_coord
+
+
+
+    def read_FC_from_phonopy(self, POSCAR='POSCAR', SPOSCAR='SPOSCAR', FORCE_CONSTANTS='FORCE_CONSTANTS'):
+        self.read_POSCAR(POSCAR)
+        self.read_SPOSCAR(SPOSCAR)
+
+        if len(self.mass) != self.total_num_atom_prim:
+            print "ERROR: size error of mass or POSCAR error "
+            return 0
+
+        f = open(FORCE_CONSTANTS, 'r')
+        tempf = f.readlines()
+        f.close()
+
+        total_line = 1 + self.total_num_atom_prim * (4 * self.total_num_atom_super)
+
+
+        if total_line != len(tempf):
+            print "ERROR: Something wrong, please check your phonopy version or FC, POSCAR, and SPOSCAR files"
+            print "Support version of phonopy is " + self.version
+            return 0
         
+        for i in range(self.total_num_atom_prim):
+            for j in range(self.total_num_atom_super):
+                templine = 1 + i*(4*self.total_num_atom_super) + (4*j)
+                #print tempf[templine].split()
+                a_atom, b_atom = int(tempf[templine].split()[0]) -1 , int(tempf[templine].split()[1]) -1 # 0, 1, 2, 3, 4, 5, ... atoms
+                a_prim_index, a_super_pos = self.find_supercell_position(a_atom)
+                b_prim_index, b_super_pos = self.find_supercell_position(b_atom)
+                distance, b_min_super_pos, multi = self.find_nearest_supercell(a_prim_index, a_super_pos, b_prim_index, b_super_pos)
+                for k in range(multi):
+                    dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
+                    if dup_check and distance <= self.cutoff_distance:
+                        FC_temp = np.zeros((3, 3))
+                        FC_temp[0][0] = float(tempf[templine+1].split()[0]) ; FC_temp[0][1] = float(tempf[templine+1].split()[1]) ; FC_temp[0][2] = float(tempf[templine+1].split()[2])
+                        FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
+                        FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
+                        self.information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp])
+        #print self.information
+        #self.information = np.array(self.information)
+        #np.save('inoformation_file', self.information)
+        return 0
+
+    def check_duplicate(self, distance, a_atom_index, b_atom_index, b_atom_super_pos):
+        ### This function checks whether hopping paramters are duplicated or not
+        dup_check = True
+        for i in range(len(self.information)):
+            if distance == self.information[i][4]:
+                if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
+                    if np.all(b_atom_super_pos == self.information[i][3]):
+                        dup_check = False
+                if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:
+                    if np.all(b_atom_super_pos == self.information[i][3]):
+                        dup_check = False
+                    if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+                        dup_check = False
+        return dup_check               
+
+    def find_supercell_position(self, atom_index):
+        prim_index = int(atom_index) / (self.supercell[0] * self.supercell[1] * self.supercell[2])
+        super_pos = self.supercell_index[int(atom_index) % (self.supercell[0] * self.supercell[1] * self.supercell[2])]
+        return prim_index , super_pos
+
+    def find_nearest_supercell(self, a_atom_index, a_atom_super_pos, b_atom_index, b_atom_super_pos):
+        distance = []
+        supercell_pos = []
+        min_super_pos = []
+        s_pos = self.direct_coord_prim[a_atom_index] + np.array(a_atom_super_pos)
+        p_pos = self.direct_coord_prim[b_atom_index] + np.array(b_atom_super_pos)
+        for i in (-1, 0, 1):
+            for j in (-1, 0, 1):
+                for k in (-1, 0, 1):
+                    diff = s_pos  - p_pos - np.array([i,j,k])*self.supercell
+                    vec = np.dot(diff, self.latt_vec_prim)
+                    distance.append(np.linalg.norm(vec))
+                    supercell_pos.append(np.array([i,j,k])*self.supercell + np.array(b_atom_super_pos))
+        
+        distance = np.array(distance)
+        minimum = np.min(distance)
+        for i in range(27):
+            if abs(minimum - distance[i]) < self.symprec:
+                min_super_pos.append(supercell_pos[i])
+        multi = len(min_super_pos)
+
+        return round(minimum,6), np.array(min_super_pos), multi
+
+    def print_all_information(self):
+        filename = 'information_file'
+        f = open(filename, 'w')
+        #### <  0 | H |  0 + [  1 ,  0 ,  0 ] >     ===>   0.0447 +     0.0 i
+        initial_line = 'primitive number_a' + '\t' + 'primitive number_b' + '\t' + 'supercell info' + '\t' + 'distance' + '\t' + 'i' + '\t' + 'j' + '\t' + '\n'
+        f.write(initial_line)
+        for i in range(len(self.information)):
+            templine = ' < ' + '\t' + str(self.information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.information[i][3][0]) + '\t' + str(self.information[i][3][1]) + '\t' + str(self.information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.information[i][4]) + '\t' + '  ===>  ' + '\n'
+            f.write(templine)
+        f.close()
 
 
 
@@ -56,8 +261,6 @@ class ForceConstant:
     def set_fc_direct(self,iatom, jatom, supercell_of_jatom, fc):
         fc_temp = [iatom, jatom, supercell_of_jatom, fc]
         self.fc_info.append(fc_temp)
-
-
 
     def set_hopping(self,iatom, jatom, supercell_of_jatom, V_info):
         #if len(force_constant) != self.dimension or len(force_constant[0]) != self.dimension:
@@ -161,6 +364,12 @@ class ForceConstant:
             fc = np.array([[fc_xx, fc_xy, fc_xz], [fc_xy, fc_yy, fc_yz], [fc_xz, fc_yz, fc_zz]])
 
         return fc
+
+    def get_fc_other_calculators(self, other_calculator):
+        self.set_geometry(other_calculator.latt_vec_prim, other_calculator.direct_coord_prim, other_calculator.mass)
+        for i in range(len(other_calculator.information)):
+            self.set_fc_direct(other_calculator.information[i][0], other_calculator.information[i][2], other_calculator.information[i][3], other_calculator.information[i][5])
+        self.set_acoustic_sum_rule()
 
     def print_info(self):
         print 'Dimension = ' + str(self.dimension)
@@ -464,9 +673,6 @@ class DynamicalMatrix:
             #print modified_dyn[6][6]
             #w1 = (np.linalg.eigvalsh(modified_dyn).real) *vasp2THZ
             w1, v1 = np.linalg.eigh(modified_dyn)
-    
-            #w2 = np.linalg.eigvalsh(dyn).real
-            #w = refine_frequency(w2)*vasp2THZ
             band_num = len(w1)
             band_structure.append(w1)
 
@@ -1208,7 +1414,14 @@ def get_cell_matrix(a, b, c, alpha, beta, gamma):
     lattice[0, 0] = a
     lattice[1] = np.array([b1, b2, b3]) * b
     lattice[2] = np.array([c1, c2, c3]) * c
-    return lattice                                  
+    return lattice    
+
+def from_cartesin_to_direct(lattice, cart_coord):
+    # This will transform Cartesian coordinates to direct coordinates
+    lattice_inv = np.linalg.inv(np.array(lattice).T)
+    direct = np.matmul(lattice_inv, np.array(cart_coord).T)
+    return direct.T
+
 ###########################################################################
 
 
