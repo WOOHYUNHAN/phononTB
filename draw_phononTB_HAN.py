@@ -157,6 +157,7 @@ class Read_FC_from_other_calculators:
                 a_prim_index, a_super_pos = self.find_supercell_position(a_atom)
                 b_prim_index, b_super_pos = self.find_supercell_position(b_atom)
                 distance, b_min_super_pos, multi = self.find_nearest_supercell(a_prim_index, a_super_pos, b_prim_index, b_super_pos)
+                print distance, multi
                 for k in range(multi):
                     dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
                     if dup_check and distance <= self.cutoff_distance:
@@ -179,16 +180,38 @@ class Read_FC_from_other_calculators:
                     if np.all(b_atom_super_pos == self.information[i][3]):
                         dup_check = False
                 if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:
-                    if np.all(b_atom_super_pos == self.information[i][3]):
-                        dup_check = False
-                    if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
-                        dup_check = False
-        return dup_check               
+                    if a_atom_index == b_atom_index:
+                        pass
+                        #if np.all(b_atom_super_pos == self.information[i][3]):
+                        #    dup_check = False
+                        #if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+                        #    dup_check = False     
+                    else:
+                        if np.all(b_atom_super_pos == self.information[i][3]):
+                            dup_check = False
+                        if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+                            dup_check = False                       
+        return dup_check
+    
+#   def check_duplicate(self, distance, a_atom_index, b_atom_index, b_atom_super_pos):
+#       ### This function checks whether hopping paramters are duplicated or not
+#       dup_check = True
+#       for i in range(len(self.information)):
+#           if distance == self.information[i][4]:
+#               if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
+#                   if np.all(b_atom_super_pos == self.information[i][3]):
+#                       dup_check = False
+#               if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:
+#                   if np.all(b_atom_super_pos == self.information[i][3]):
+#                       dup_check = False
+#                   if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+#                       dup_check = False
+#       return dup_check       
 
     def find_supercell_position(self, atom_index):
         prim_index = int(atom_index) / (self.supercell[0] * self.supercell[1] * self.supercell[2])
         super_pos = self.supercell_index[int(atom_index) % (self.supercell[0] * self.supercell[1] * self.supercell[2])]
-        return prim_index , super_pos
+        return prim_index , np.array(super_pos)
 
     def find_nearest_supercell(self, a_atom_index, a_atom_super_pos, b_atom_index, b_atom_super_pos):
         distance = []
@@ -212,15 +235,28 @@ class Read_FC_from_other_calculators:
         multi = len(min_super_pos)
 
         return round(minimum,6), np.array(min_super_pos), multi
+    
+    def find_sigma_pi_from_fc(self, fc, ji_vector):
+        l = ji_vector[0] / np.linalg.norm(ji_vector)
+        m = ji_vector[1] / np.linalg.norm(ji_vector)
+        n = ji_vector[2] / np.linalg.norm(ji_vector)
+        fc_matrix = np.array([fc[0][0], fc[1][1]])
+        transform_matrix = np.array([[l*l, 1.0-l*l],[m*m, 1.0-m*m]])
+        final_results = np.dot(np.linalg.inv(transform_matrix), fc_matrix.T)
+        V_pps = final_results[0] ; V_ppp = final_results[1]
+        return V_pps, V_ppp
 
     def print_all_information(self):
         filename = 'information_file'
         f = open(filename, 'w')
-        #### <  0 | H |  0 + [  1 ,  0 ,  0 ] >     ===>   0.0447 +     0.0 i
-        initial_line = 'primitive number_a' + '\t' + 'primitive number_b' + '\t' + 'supercell info' + '\t' + 'distance' + '\t' + 'i' + '\t' + 'j' + '\t' + '\n'
+        initial_line =' < ' + '\t' + 'A atom' + '\t' + ' |  H  | ' + '\t' +  'B atom' + '\t'  + ' [ ' + '\t' + 'super x' + '\t' + 'super y' + '\t' + 'super z' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '  ===>  ' '\n' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
         f.write(initial_line)
         for i in range(len(self.information)):
-            templine = ' < ' + '\t' + str(self.information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.information[i][3][0]) + '\t' + str(self.information[i][3][1]) + '\t' + str(self.information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.information[i][4]) + '\t' + '  ===>  ' + '\n'
+            templine = ' < ' + '\t' + str(self.information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.information[i][3][0]) + '\t' + str(self.information[i][3][1]) + '\t' + str(self.information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.information[i][4]) + '\t' + '  ===>  ' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
+            for j in range(3):
+                for k in range(3):
+                    templine += '\t' + str(self.information[i][5][j][k])
+            templine += '\n'
             f.write(templine)
         f.close()
 
@@ -369,7 +405,7 @@ class ForceConstant:
         self.set_geometry(other_calculator.latt_vec_prim, other_calculator.direct_coord_prim, other_calculator.mass)
         for i in range(len(other_calculator.information)):
             self.set_fc_direct(other_calculator.information[i][0], other_calculator.information[i][2], other_calculator.information[i][3], other_calculator.information[i][5])
-        self.set_acoustic_sum_rule()
+        #self.set_acoustic_sum_rule()
 
     def print_info(self):
         print 'Dimension = ' + str(self.dimension)
