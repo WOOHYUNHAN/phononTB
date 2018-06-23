@@ -157,15 +157,27 @@ class Read_FC_from_other_calculators:
                 a_prim_index, a_super_pos = self.find_supercell_position(a_atom)
                 b_prim_index, b_super_pos = self.find_supercell_position(b_atom)
                 distance, b_min_super_pos, multi = self.find_nearest_supercell(a_prim_index, a_super_pos, b_prim_index, b_super_pos)
-                print distance, multi
-                for k in range(multi):
-                    dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
-                    if dup_check and distance <= self.cutoff_distance:
-                        FC_temp = np.zeros((3, 3))
-                        FC_temp[0][0] = float(tempf[templine+1].split()[0]) ; FC_temp[0][1] = float(tempf[templine+1].split()[1]) ; FC_temp[0][2] = float(tempf[templine+1].split()[2])
-                        FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
-                        FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
-                        self.information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp])
+                #print distance, multi
+                if multi != 1:
+                    #print distance, multi
+                    FC_temp = np.zeros((3, 3))
+                    FC_temp[0][0] = float(tempf[templine+1].split()[0]) ; FC_temp[0][1] = float(tempf[templine+1].split()[1]) ; FC_temp[0][2] = float(tempf[templine+1].split()[2])
+                    FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
+                    FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
+                    #print a_prim_index, np.array(a_super_pos), a_prim_index, np.array(a_super_pos), distance, FC_temp
+                    for k in range(multi):
+                        dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
+                        if dup_check and distance <= self.cutoff_distance:
+                            self.information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp/multi])
+                else:
+                    for k in range(multi): # multi = 1
+                        dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
+                        if dup_check and distance <= self.cutoff_distance:
+                            FC_temp = np.zeros((3, 3))
+                            FC_temp[0][0] = float(tempf[templine+1].split()[0]) ; FC_temp[0][1] = float(tempf[templine+1].split()[1]) ; FC_temp[0][2] = float(tempf[templine+1].split()[2])
+                            FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
+                            FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
+                            self.information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp])
         #print self.information
         #self.information = np.array(self.information)
         #np.save('inoformation_file', self.information)
@@ -176,18 +188,19 @@ class Read_FC_from_other_calculators:
         dup_check = True
         for i in range(len(self.information)):
             if distance == self.information[i][4]:
-                if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
-                    if np.all(b_atom_super_pos == self.information[i][3]):
-                        dup_check = False
-                if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:
-                    if a_atom_index == b_atom_index:
-                        pass
-                        #if np.all(b_atom_super_pos == self.information[i][3]):
-                        #    dup_check = False
-                        #if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
-                        #    dup_check = False     
-                    else:
-                        if np.all(b_atom_super_pos == self.information[i][3]):
+                if a_atom_index == b_atom_index:
+                    if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
+                        if np.all(np.array(b_atom_super_pos)  == self.information[i][3]):
+                            if np.all(np.array(b_atom_super_pos)  == np.array([0,0,0])):
+                                dup_check = False
+                            else:
+                                dup_check = False                  
+                else:
+                    if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
+                        if np.all(np.array(b_atom_super_pos) == self.information[i][3]):
+                            dup_check = False
+                    if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:  
+                        if np.all(np.array(b_atom_super_pos)  == self.information[i][3]):
                             dup_check = False
                         if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
                             dup_check = False                       
@@ -249,7 +262,7 @@ class Read_FC_from_other_calculators:
     def print_all_information(self):
         filename = 'information_file'
         f = open(filename, 'w')
-        initial_line =' < ' + '\t' + 'A atom' + '\t' + ' |  H  | ' + '\t' +  'B atom' + '\t'  + ' [ ' + '\t' + 'super x' + '\t' + 'super y' + '\t' + 'super z' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '  ===>  ' '\n' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
+        initial_line =' < ' + '\t' + 'Aatom' + '\t' + ' |  H  | ' + '\t' +  'Batom' + '\t'  + ' [ ' + '\t' + 'superx' + '\t' + 'supery' + '\t' + 'superz' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '  ===>  ' '\n' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
         f.write(initial_line)
         for i in range(len(self.information)):
             templine = ' < ' + '\t' + str(self.information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.information[i][3][0]) + '\t' + str(self.information[i][3][1]) + '\t' + str(self.information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.information[i][4]) + '\t' + '  ===>  ' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
@@ -401,11 +414,12 @@ class ForceConstant:
 
         return fc
 
-    def get_fc_other_calculators(self, other_calculator):
+    def get_fc_other_calculators(self, other_calculator, asr):
         self.set_geometry(other_calculator.latt_vec_prim, other_calculator.direct_coord_prim, other_calculator.mass)
         for i in range(len(other_calculator.information)):
             self.set_fc_direct(other_calculator.information[i][0], other_calculator.information[i][2], other_calculator.information[i][3], other_calculator.information[i][5])
-        #self.set_acoustic_sum_rule()
+        if asr:
+            self.set_acoustic_sum_rule()
 
     def print_info(self):
         print 'Dimension = ' + str(self.dimension)
