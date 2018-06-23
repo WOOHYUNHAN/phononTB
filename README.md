@@ -13,7 +13,7 @@
 
 ## History
 
-1. ~2018. 2: Construct TB model & topological quantities
-2. 2018. 4: Edge states
-3. 2018. 5: Visualization via v_sim
-4. 2018. 6: Read_FC_from_phonopy
+1. ~2018.2: Construct TB model & topological quantities
+2. 2018.4: Edge states
+3. 2018.5: Visualization via v_sim
+4. 2018.6: Read_FC_from_phonopy
