@@ -193,8 +193,8 @@ class Read_FC_from_other_calculators:
                         if np.all(np.array(b_atom_super_pos)  == self.information[i][3]):
                             if np.all(np.array(b_atom_super_pos)  == np.array([0,0,0])):
                                 dup_check = False
-                            else:
-                                dup_check = False                  
+                        if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+                            dup_check = False    
                 else:
                     if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
                         if np.all(np.array(b_atom_super_pos) == self.information[i][3]):
@@ -342,8 +342,10 @@ class ForceConstant:
                 for j in range(len(self.fc_info)):
                     if i == self.fc_info[j][0] or i == self.fc_info[j][1]:
                         if (i == self.fc_info[j][0] and i == self.fc_info[j][1]):
-                            #if np.linalg.norm(self.fc_info[j][2] - np.array([0.0,0.0])) != 0:
-                            fc_from_asr -= np.array(self.fc_info[j][3])
+                            if np.linalg.norm(self.fc_info[j][2] - np.array([0.0,0.0])) != 0:
+                                fc_from_asr -= np.array(2.0*self.fc_info[j][3])  ### This case for 0, 0 [1,0] like NNN hopping
+                            else:
+                                fc_from_asr -= np.array(self.fc_info[j][3])
                         else:
                             fc_from_asr -= np.array(self.fc_info[j][3])
                 fc_temp = [i, i, [0,0], fc_from_asr]
@@ -358,8 +360,10 @@ class ForceConstant:
                 for j in range(len(self.fc_info)):
                     if i == self.fc_info[j][0] or i == self.fc_info[j][1]:
                         if (i == self.fc_info[j][0] and i == self.fc_info[j][1]):
-                            #if np.linalg.norm(self.fc_info[j][2] - np.array([0.0,0.0,0.0])) != 0:
-                            fc_from_asr -= np.array(self.fc_info[j][3])
+                            if np.linalg.norm(self.fc_info[j][2] - np.array([0.0,0.0,0.0])) != 0:
+                                fc_from_asr -= np.array(2.0*self.fc_info[j][3])  ### This case for 0, 0 [1,0] like NNN hopping
+                            else:
+                                fc_from_asr -= np.array(self.fc_info[j][3])  ### This case for 0, 0 [0,0] like on-site energies
                         else:
                             fc_from_asr -= np.array(self.fc_info[j][3])
                 fc_temp = [i, i, [0,0,0], fc_from_asr]
@@ -592,7 +596,7 @@ class DynamicalMatrix:
         dm = np.zeros((self.dimension * self.num_atom, self.dimension * self.num_atom), dtype=complex)
         for i in range(self.num_atom):
             for j in range(self.num_atom):
-                if i <= j:
+                if i < j:
                     mass_factor = np.sqrt(float(self.atom_mas[i]) * float(self.atom_mas[j]))
                     dm_local = np.zeros((self.dimension, self.dimension), dtype=complex)
                     proper_fc_info = self.find_fc_for_pair(i,j)
@@ -603,9 +607,20 @@ class DynamicalMatrix:
                         phase_factor = np.exp(np.vdot(r, q) * 1j)
                         dm_local += proper_fc_info[k][1] * phase_factor / mass_factor
                     dm[(i*self.dimension):(i*self.dimension+self.dimension), (j*self.dimension):(j*self.dimension+self.dimension)] += dm_local
-                    if i != j:
-                        dm[(j*self.dimension):(j*self.dimension+self.dimension), (i*self.dimension):(i*self.dimension+self.dimension)] += dm_local.conj().transpose()
-
+                    dm[(j*self.dimension):(j*self.dimension+self.dimension), (i*self.dimension):(i*self.dimension+self.dimension)] += dm_local.conj().transpose()
+                if i == j:
+                    mass_factor = np.sqrt(float(self.atom_mas[i]) * float(self.atom_mas[j]))
+                    dm_local = np.zeros((self.dimension, self.dimension), dtype=complex)
+                    proper_fc_info = self.find_fc_for_pair(i,j)
+                    for k in range(len(proper_fc_info)):
+                        r = np.dot(self.latt_vec.transpose(), np.array(proper_fc_info[k][0]).transpose())
+                        phase_factor = np.exp(np.vdot(r, q) * 1j)
+                        if np.linalg.norm(r) ==0:
+                            dm_local += proper_fc_info[k][1] * phase_factor / mass_factor
+                        else:
+                            dm_local += proper_fc_info[k][1] * phase_factor / mass_factor + (proper_fc_info[k][1] * phase_factor / mass_factor).conj().transpose()
+                    dm[(i*self.dimension):(i*self.dimension+self.dimension), (j*self.dimension):(j*self.dimension+self.dimension)] += dm_local
+        
         dynamical_matrix = (dm + dm.conj().transpose()) / 2.0 
         #dynamical_matrix = dm
 
