@@ -11,7 +11,8 @@ import datetime as dt
 
 class Read_FC_from_other_calculators:
     def __init__(self, calculator):
-        self.information = []
+        self.fc_information = []
+        self.hopping = []
         self.calculator = calculator # phononpy and DFPT in QE
         if self.calculator == "PHONOPY" or self.calculator == "phonopy" or self.calculator == "Phonopy":
             self.version = '1.12.6.53' # latest version, FORCE_CONSTANTS file depends on the version so please check
@@ -167,7 +168,10 @@ class Read_FC_from_other_calculators:
                     for k in range(multi):
                         dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
                         if dup_check and distance <= self.cutoff_distance:
-                            self.information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp/multi])
+                            self.fc_information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp/multi])
+                            ji_vector = np.dot(self.latt_vec_prim.transpose(), np.array(self.direct_coord_prim[b_prim_index]) + b_min_super_pos[k] - np.array(self.direct_coord_prim[a_prim_index]) - a_super_pos)
+                            V_pps, V_ppp = self.find_sigma_pi_from_fc(FC_temp, ji_vector)
+                            self.hopping.append([a_prim_index, b_prim_index, np.array(b_min_super_pos[k]), [V_pps, V_ppp]])
                 else:
                     for k in range(multi): # multi = 1
                         dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
@@ -176,49 +180,38 @@ class Read_FC_from_other_calculators:
                             FC_temp[0][0] = float(tempf[templine+1].split()[0]) ; FC_temp[0][1] = float(tempf[templine+1].split()[1]) ; FC_temp[0][2] = float(tempf[templine+1].split()[2])
                             FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
                             FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
-                            self.information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp])
-        #print self.information
-        #self.information = np.array(self.information)
-        #np.save('inoformation_file', self.information)
+                            self.fc_information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp])
+                            ji_vector = np.dot(self.latt_vec_prim.transpose(), np.array(self.direct_coord_prim[b_prim_index]) + b_min_super_pos[k] - np.array(self.direct_coord_prim[a_prim_index]) - a_super_pos)
+                            V_pps, V_ppp = self.find_sigma_pi_from_fc(FC_temp, ji_vector)
+                            self.hopping.append([a_prim_index, b_prim_index, np.array(b_min_super_pos[k]), [V_pps, V_ppp]])
+        #print self.fc_information
+        #self.fc_information = np.array(self.fc_information)
+        #np.save('inoformation_file', self.fc_information)
         return 0
 
     def check_duplicate(self, distance, a_atom_index, b_atom_index, b_atom_super_pos):
         ### This function checks whether hopping paramters are duplicated or not
         dup_check = True
-        for i in range(len(self.information)):
-            if distance == self.information[i][4]:
+        for i in range(len(self.fc_information)):
+            if distance == self.fc_information[i][4]:
                 if a_atom_index == b_atom_index:
-                    if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
-                        if np.all(np.array(b_atom_super_pos)  == self.information[i][3]):
+                    if a_atom_index == self.fc_information[i][0] and b_atom_index == self.fc_information[i][2]:
+                        if np.all(np.array(b_atom_super_pos)  == self.fc_information[i][3]):
                             if np.all(np.array(b_atom_super_pos)  == np.array([0,0,0])):
                                 dup_check = False
-                        if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+                        if np.all(np.array(b_atom_super_pos) == -1 * self.fc_information[i][3]):
                             dup_check = False    
                 else:
-                    if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
-                        if np.all(np.array(b_atom_super_pos) == self.information[i][3]):
+                    if a_atom_index == self.fc_information[i][0] and b_atom_index == self.fc_information[i][2]:
+                        if np.all(np.array(b_atom_super_pos) == self.fc_information[i][3]):
                             dup_check = False
-                    if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:  
-                        if np.all(np.array(b_atom_super_pos)  == self.information[i][3]):
+                    if a_atom_index == self.fc_information[i][2] and b_atom_index == self.fc_information[i][0]:  
+                        if np.all(np.array(b_atom_super_pos)  == self.fc_information[i][3]):
                             dup_check = False
-                        if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
+                        if np.all(np.array(b_atom_super_pos) == -1 * self.fc_information[i][3]):
                             dup_check = False                       
         return dup_check
-    
-#   def check_duplicate(self, distance, a_atom_index, b_atom_index, b_atom_super_pos):
-#       ### This function checks whether hopping paramters are duplicated or not
-#       dup_check = True
-#       for i in range(len(self.information)):
-#           if distance == self.information[i][4]:
-#               if a_atom_index == self.information[i][0] and b_atom_index == self.information[i][2]:
-#                   if np.all(b_atom_super_pos == self.information[i][3]):
-#                       dup_check = False
-#               if a_atom_index == self.information[i][2] and b_atom_index == self.information[i][0]:
-#                   if np.all(b_atom_super_pos == self.information[i][3]):
-#                       dup_check = False
-#                   if np.all(np.array(b_atom_super_pos) == -1 * self.information[i][3]):
-#                       dup_check = False
-#       return dup_check       
+      
 
     def find_supercell_position(self, atom_index):
         prim_index = int(atom_index) / (self.supercell[0] * self.supercell[1] * self.supercell[2])
@@ -235,7 +228,7 @@ class Read_FC_from_other_calculators:
             for j in (-1, 0, 1):
                 for k in (-1, 0, 1):
                     diff = s_pos  - p_pos - np.array([i,j,k])*self.supercell
-                    vec = np.dot(diff, self.latt_vec_prim)
+                    vec = np.dot(self.latt_vec_prim.transpose(), diff)
                     distance.append(np.linalg.norm(vec))
                     supercell_pos.append(np.array([i,j,k])*self.supercell + np.array(b_atom_super_pos))
         
@@ -249,25 +242,44 @@ class Read_FC_from_other_calculators:
         return round(minimum,6), np.array(min_super_pos), multi
     
     def find_sigma_pi_from_fc(self, fc, ji_vector):
-        l = ji_vector[0] / np.linalg.norm(ji_vector)
-        m = ji_vector[1] / np.linalg.norm(ji_vector)
-        n = ji_vector[2] / np.linalg.norm(ji_vector)
-        fc_matrix = np.array([fc[0][0], fc[1][1]])
-        transform_matrix = np.array([[l*l, 1.0-l*l],[m*m, 1.0-m*m]])
-        final_results = np.dot(np.linalg.inv(transform_matrix), fc_matrix.T)
+        if np.linalg.norm(ji_vector) == 0:
+            l = 0.0 ; m = 0.0 ; n = 0.0
+            final_results = [0, fc[0][0]]
+        else:
+            l = ji_vector[0] / np.linalg.norm(ji_vector)
+            m = ji_vector[1] / np.linalg.norm(ji_vector)
+            n = ji_vector[2] / np.linalg.norm(ji_vector)
+            # l*l + m*m + n*n = 1.0
+            if (l == 0.0 and m == 0.0): # n = 1.0
+                final_results = [fc[2][2], fc[0][0]]
+            elif (round(l*l,6) == round(m*m,6)): #
+                if (round(l*l,6) == round(n*n,6)):
+                    fc_matrix = np.array([fc[0][0], fc[0][1]])
+                    transform_matrix = np.array([[l*l, 1.0-l*l],[l*m, -1.0*l*m]])
+                    #print l*l, m*m, n*n, transform_matrix
+                    final_results = np.dot(np.linalg.inv(transform_matrix), fc_matrix)
+                else:
+                    fc_matrix = np.array([fc[0][0], fc[2][2]])
+                    transform_matrix = np.array([[l*l, 1.0-l*l],[n*n, 1.0-n*n]])
+                    #print l*l, m*m, n*n, transform_matrix
+                    final_results = np.dot(np.linalg.inv(transform_matrix), fc_matrix)
+            else:
+                fc_matrix = np.array([fc[0][0], fc[1][1]])
+                transform_matrix = np.array([[l*l, 1.0-l*l],[m*m, 1.0-m*m]])
+                final_results = np.dot(np.linalg.inv(transform_matrix), fc_matrix)
         V_pps = final_results[0] ; V_ppp = final_results[1]
         return V_pps, V_ppp
 
     def print_all_information(self):
         filename = 'information_file'
         f = open(filename, 'w')
-        initial_line =' < ' + '\t' + 'Aatom' + '\t' + ' |  H  | ' + '\t' +  'Batom' + '\t'  + ' [ ' + '\t' + 'superx' + '\t' + 'supery' + '\t' + 'superz' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '  ===>  ' '\n' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
+        initial_line =' < ' + '\t' + 'Aatom' + '\t' + ' |  H  | ' + '\t' +  'Batom' + '\t'  + ' [ ' + '\t' + 'superx' + '\t' + 'supery' + '\t' + 'superz' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '===>' + '\t' + 'V_pps' + '\t' + 'V_ppp'  + '\n' 
         f.write(initial_line)
-        for i in range(len(self.information)):
-            templine = ' < ' + '\t' + str(self.information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.information[i][3][0]) + '\t' + str(self.information[i][3][1]) + '\t' + str(self.information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.information[i][4]) + '\t' + '  ===>  ' #+ str(self.information[i][6]) + '\t' + str(self.information[i][7]) + '\t'
+        for i in range(len(self.fc_information)):
+            templine = ' < ' + '\t' + str(self.fc_information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.fc_information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.fc_information[i][3][0]) + '\t' + str(self.fc_information[i][3][1]) + '\t' + str(self.fc_information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.fc_information[i][4]) + '\t' + '===>' + '\t' + str(self.hopping[i][3][0]) + '\t' + str(self.hopping[i][3][1]) 
             for j in range(3):
                 for k in range(3):
-                    templine += '\t' + str(self.information[i][5][j][k])
+                    templine += '\t' + str(self.fc_information[i][5][j][k])
             templine += '\n'
             f.write(templine)
         f.close()
@@ -419,8 +431,10 @@ class ForceConstant:
 
     def get_fc_other_calculators(self, other_calculator, asr):
         self.set_geometry(other_calculator.latt_vec_prim, other_calculator.direct_coord_prim, other_calculator.mass)
-        for i in range(len(other_calculator.information)):
-            self.set_fc_direct(other_calculator.information[i][0], other_calculator.information[i][2], other_calculator.information[i][3], other_calculator.information[i][5])
+        for i in range(len(other_calculator.fc_information)):
+            self.set_fc_direct(other_calculator.fc_information[i][0], other_calculator.fc_information[i][2], other_calculator.fc_information[i][3], other_calculator.fc_information[i][5])
+        #for i in range(len(other_calculator.hopping)):
+        #    self.set_hopping(other_calculator.hopping[i][0], other_calculator.hopping[i][1], other_calculator.hopping[i][2], other_calculator.hopping[i][3])
         if asr:
             self.set_acoustic_sum_rule()
 
@@ -444,11 +458,11 @@ class ForceConstant:
 
     def make_edge(self, num_repeat, direction):
         if direction == 0:
-            print 'Edeg direction is x '
+            print 'Edge direction is x '
         elif direction == 1:
-            print 'Edeg direction is y '
+            print 'Edge direction is y '
         elif direction == 2:
-            print 'Edeg direction is z '
+            print 'Edge direction is z '
 
         if direction + 1 > self.dimension:
             print 'ERROR: direction does not match with diemsion'
@@ -500,23 +514,40 @@ class ForceConstant:
 
         new_fc_info = []
 
+        #for i in range(num_repeat):
+        #    upper_limit = num_repeat - (i+1)
+        #    lower_limit = -i
+        #    #print upper_limit, lower_limit
+        #    for j in range(len(self.hopping_save)):
+        #        if self.hopping_save[j][2][self.edge_direction] > upper_limit or self.hopping_save[j][2][self.edge_direction] < lower_limit:
+        #            pass
+        #        else:
+        #            reference_atom = int(self.hopping_save[j][0]*num_repeat + i)
+        #            target_atom = int(self.hopping_save[j][1]*num_repeat + i + self.hopping_save[j][2][self.edge_direction])
+        #            new_direction = [self.hopping_save[j][2][k] for k in range(self.dimension)] 
+        #            new_direction[self.edge_direction] = 0.0
+        #            new_fc = self.generate_fc_constant_TB(reference_atom, target_atom, new_direction, self.hopping_save[j][3][0], self.hopping_save[j][3][1])
+        #            temp_new_fc_info = [reference_atom, target_atom, new_direction, new_fc]
+        #            new_fc_info.append(temp_new_fc_info)
+        ##print new_fc_info
+
+
         for i in range(num_repeat):
             upper_limit = num_repeat - (i+1)
             lower_limit = -i
             #print upper_limit, lower_limit
-            for j in range(len(self.hopping_save)):
-                if self.hopping_save[j][2][self.edge_direction] > upper_limit or self.hopping_save[j][2][self.edge_direction] < lower_limit:
+            for j in range(len(self.fc_info)):
+                if self.fc_info[j][2][self.edge_direction] > upper_limit or self.fc_info[j][2][self.edge_direction] < lower_limit:
                     pass
                 else:
-                    reference_atom = int(self.hopping_save[j][0]*num_repeat + i)
-                    target_atom = int(self.hopping_save[j][1]*num_repeat + i + self.hopping_save[j][2][self.edge_direction])
-                    new_direction = [self.hopping_save[j][2][k] for k in range(self.dimension)] 
+                    reference_atom = int(self.fc_info[j][0]*num_repeat + i)
+                    target_atom = int(self.fc_info[j][1]*num_repeat + i + self.fc_info[j][2][self.edge_direction])
+                    new_direction = [self.fc_info[j][2][k] for k in range(self.dimension)] 
                     new_direction[self.edge_direction] = 0.0
-                    new_fc = self.generate_fc_constant_TB(reference_atom, target_atom, new_direction, self.hopping_save[j][3][0], self.hopping_save[j][3][1])
+                    new_fc = self.fc_info[j][3]
                     temp_new_fc_info = [reference_atom, target_atom, new_direction, new_fc]
                     new_fc_info.append(temp_new_fc_info)
         #print new_fc_info
-
 
         self.fc_info = new_fc_info
         self.num_repeat = num_repeat
@@ -763,7 +794,7 @@ class DynamicalMatrix:
             if self.edge_cal:
                 pos_expectation_nk = []
                 for j in range(band_num):
-                    expectation = np.matmul(np.conjugate(v1[:,j]), np.matmul(position_operator, v1[:,j].transpose()))
+                    expectation = np.dot(np.conjugate(v1[:,j]), np.dot(position_operator, v1[:,j].transpose()))
                     #expectation = np.matmul(np.conjugate(v1[j]), v1[j].transpose())
                     pos_expectation_nk.append(expectation)
                 pos_expectation.append(pos_expectation_nk)
@@ -911,9 +942,8 @@ class DynamicalMatrix:
         bubble_size = 40
         for i in range(band_num/2, band_num):
             plt.plot(qx, eigenval[i], linewidth=0.3, color='black')
-            plt.scatter(qx, eigenval[i], bubble_size, c=projected[i], cmap='RdBu', vmin=0, vmax=self.num_repeat-1)
+            plt.scatter(qx, eigenval[i], bubble_size, c=projected[i], cmap='RdBu', vmin=0, vmax=self.num_repeat-1, edgecolors='face')
 
-    
 
         plt.xlim(min(sqx)-0.1, max(sqx)+0.1)
         fig.savefig('phband_edge.png')
