@@ -547,7 +547,6 @@ class ForceConstant:
                     new_fc = self.fc_info[j][3]
                     temp_new_fc_info = [reference_atom, target_atom, new_direction, new_fc]
                     new_fc_info.append(temp_new_fc_info)
-        #print new_fc_info
 
         self.fc_info = new_fc_info
         self.num_repeat = num_repeat
@@ -847,7 +846,7 @@ class DynamicalMatrix:
         if self.edge_cal:
             for i in range(len(q_vec_list)):
                 for j in range(band_num):
-                    templine = str(q_distance_list[i]) + ' ' + str(band_structure[i][j]) + ' ' + str(pos_expectation[i][j])
+                    templine = str(q_distance_list[i]) + ' ' + str(band_structure[i][j]*vasp2THZ) + ' ' + str(pos_expectation[i][j])
                     templine += '\n'
                     g3.write(templine)
                 g3.write('\n')
@@ -1212,6 +1211,7 @@ class DynamicalMatrix:
         self._set_cell_oriented()
         lat_oriented = self._lattice_oriented
         pos_oriented = self._positions_oriented
+        vasp2THZ = 15.633302
 
         filename ='anime_'+self.out_tag+'.ascii'
         f = open(filename, 'w')
@@ -1242,7 +1242,7 @@ class DynamicalMatrix:
         band_num = len(w1)
 
         for i in range(band_num/2, band_num):
-            templine_start = '#metaData:  qpt=[' + str(q_vec[0]) + ';' + str(q_vec[1]) + ';' + str(q_vec[2]) + ';' + str(w1[i]) + '\\' + '\n'
+            templine_start = '#metaData:  qpt=[' + str(q_vec[0]) + ';' + str(q_vec[1]) + ';' + str(q_vec[2]) + ';' + str(w1[i]*vasp2THZ) + '\\' + '\n'
             f.write(templine_start)
             for j in range(self.num_atom):
                 index = j 
