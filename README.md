@@ -10,6 +10,7 @@
 ## Reference
 
 1. Hamiltonian for phonons: https://link.aps.org/doi/10.1103/PhysRevB.96.064106
+2. In preparation: W.H.Han and K.J.Chang (2018)
 
 ## History
 

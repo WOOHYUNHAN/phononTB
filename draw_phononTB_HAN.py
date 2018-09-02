@@ -1,5 +1,6 @@
 import os.path
 import time
+import sys
 from math import *
 from math import sqrt
 from numpy.linalg import *
@@ -16,6 +17,10 @@ class Read_FC_from_other_calculators:
         self.calculator = calculator # phononpy and DFPT in QE
         if self.calculator == "PHONOPY" or self.calculator == "phonopy" or self.calculator == "Phonopy":
             self.version = '1.12.6.53' # latest version, FORCE_CONSTANTS file depends on the version so please check
+        if self.calculator == "QE" or self.calculator == "Quantum Espresso" or self.calculator == "Quantum":
+            self.version = 'Not yet'
+            print "Not implemented yet"
+            return 0
     
     def read_FC(self, FC_symmetry, supercell, mass, symprec, cutoff_distance):
         if self.calculator == "PHONOPY" or self.calculator == "phonopy" or self.calculator == "Phonopy":
@@ -146,7 +151,7 @@ class Read_FC_from_other_calculators:
 
         if total_line != len(tempf):
             print "ERROR: Something wrong, please check your phonopy version or FC, POSCAR, and SPOSCAR files"
-            print "Support version of phonopy is " + self.version
+            print "Version of phonopy we support is " + self.version
             return 0
         
         for i in range(self.total_num_atom_prim):
@@ -157,7 +162,7 @@ class Read_FC_from_other_calculators:
                 a_prim_index, a_super_pos = self.find_supercell_position(a_atom)
                 b_prim_index, b_super_pos = self.find_supercell_position(b_atom)
                 distance, b_min_super_pos, multi = self.find_nearest_supercell(a_prim_index, a_super_pos, b_prim_index, b_super_pos)
-                #print distance, multi
+                #print a_prim_index, a_super_pos, b_prim_index, b_super_pos, distance, multi, b_min_super_pos
                 if multi != 1:
                     #print distance, multi
                     FC_temp = np.zeros((3, 3))
@@ -165,7 +170,7 @@ class Read_FC_from_other_calculators:
                     FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
                     FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
                     #print a_prim_index, np.array(a_super_pos), a_prim_index, np.array(a_super_pos), distance, FC_temp
-                    for k in range(multi):
+                    for k in range(multi): # This case: multi != 1
                         dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
                         if dup_check and distance <= self.cutoff_distance:
                             self.fc_information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp/multi])
@@ -173,14 +178,14 @@ class Read_FC_from_other_calculators:
                             V_pps, V_ppp = self.find_sigma_pi_from_fc(FC_temp, ji_vector)
                             self.hopping.append([a_prim_index, b_prim_index, np.array(b_min_super_pos[k]), [V_pps, V_ppp]])
                 else:
-                    for k in range(multi): # multi = 1
+                    for k in range(multi): # This case: multi = 1
                         dup_check = self.check_duplicate(distance, a_prim_index, b_prim_index, b_min_super_pos[k])
                         if dup_check and distance <= self.cutoff_distance:
                             FC_temp = np.zeros((3, 3))
                             FC_temp[0][0] = float(tempf[templine+1].split()[0]) ; FC_temp[0][1] = float(tempf[templine+1].split()[1]) ; FC_temp[0][2] = float(tempf[templine+1].split()[2])
                             FC_temp[1][0] = float(tempf[templine+2].split()[0]) ; FC_temp[1][1] = float(tempf[templine+2].split()[1]) ; FC_temp[1][2] = float(tempf[templine+2].split()[2])
                             FC_temp[2][0] = float(tempf[templine+3].split()[0]) ; FC_temp[2][1] = float(tempf[templine+3].split()[1]) ; FC_temp[2][2] = float(tempf[templine+3].split()[2])
-                            self.fc_information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp])
+                            self.fc_information.append([a_prim_index, np.array(a_super_pos), b_prim_index, np.array(b_min_super_pos[k]), distance, FC_temp/multi])
                             ji_vector = np.dot(self.latt_vec_prim.transpose(), np.array(self.direct_coord_prim[b_prim_index]) + b_min_super_pos[k] - np.array(self.direct_coord_prim[a_prim_index]) - a_super_pos)
                             V_pps, V_ppp = self.find_sigma_pi_from_fc(FC_temp, ji_vector)
                             self.hopping.append([a_prim_index, b_prim_index, np.array(b_min_super_pos[k]), [V_pps, V_ppp]])
@@ -239,7 +244,7 @@ class Read_FC_from_other_calculators:
                 min_super_pos.append(supercell_pos[i])
         multi = len(min_super_pos)
 
-        return round(minimum,6), np.array(min_super_pos), multi
+        return round(minimum,5), np.array(min_super_pos), multi
     
     def find_sigma_pi_from_fc(self, fc, ji_vector):
         if np.linalg.norm(ji_vector) == 0:
@@ -322,7 +327,7 @@ class ForceConstant:
         fc_temp = [iatom, jatom, supercell_of_jatom, fc]
         self.fc_info.append(fc_temp)
 
-    def set_hopping(self,iatom, jatom, supercell_of_jatom, V_info):
+    def set_hopping(self, iatom, jatom, supercell_of_jatom, V_info):
         #if len(force_constant) != self.dimension or len(force_constant[0]) != self.dimension:
         #    print 'Please check either dimension or the size of force constant; They are different to each other'
         #    return 0
@@ -332,6 +337,11 @@ class ForceConstant:
         if iatom == jatom:
             print 'iatom == jatom; Do you really need it? or Do you intend to consider NNN ?'
 
+        if not self.check_duplicate_TBmode(iatom, jatom, supercell_of_jatom):
+            print "There is duplication !!!"
+            print iatom, jatom, supercell_of_jatom
+            sys.exit(1)
+
         self.hopping_save.append([iatom, jatom, supercell_of_jatom, V_info])
         fc = self.generate_fc_constant_TB(iatom, jatom, supercell_of_jatom, V_info[0], V_info[1])
 
@@ -340,13 +350,21 @@ class ForceConstant:
         #print fc_temp
 
         self.fc_info.append(fc_temp)
-    
+
+    def check_duplicate_TBmode(self, iatom, jatom, supercell_of_jatom):
+        for i in range(len(self.fc_info)):
+            if (iatom == self.fc_info[i][0] and jatom == self.fc_info[i][1]):
+                if np.all(np.array(supercell_of_jatom) - self.fc_info[i][2] == 0):
+                    return False
+            if (jatom == self.fc_info[i][0] and iatom == self.fc_info[i][1]):
+                if np.all(np.array(supercell_of_jatom) + self.fc_info[i][2] == 0):
+                    return False
+        return True
 
     def set_acoustic_sum_rule(self):
         '''
-        It determines on-site force constants to statisfy constraints
+        It determines whether on-site force constants statisfy constraints or not
         '''
-
         if self.dimension == 2:
             for i in range(self.num_atom):
                 fc_from_asr = np.zeros((self.dimension,self.dimension))
@@ -359,6 +377,7 @@ class ForceConstant:
                                 fc_from_asr -= np.array(self.fc_info[j][3])
                         else:
                             fc_from_asr -= np.array(self.fc_info[j][3])
+                #print fc_from_asr
                 fc_temp = [i, i, [0,0], fc_from_asr]
                 self.fc_info.append(fc_temp)
                 hopping_from_asr = [0, fc_from_asr[0][0]]
@@ -372,16 +391,18 @@ class ForceConstant:
                     if i == self.fc_info[j][0] or i == self.fc_info[j][1]:
                         if (i == self.fc_info[j][0] and i == self.fc_info[j][1]):
                             if np.linalg.norm(self.fc_info[j][2] - np.array([0.0,0.0,0.0])) != 0:
-                                fc_from_asr -= np.array(2.0*self.fc_info[j][3])  ### This case for 0, 0 [1,0] like NNN hopping
+                                fc_from_asr -= np.array(2.0*self.fc_info[j][3])  ### This case for 0, 0 [1,0] like NNN hopping why 2.0? 0, 0, [1,0] == 0, 0 [-1, 0]
                             else:
                                 fc_from_asr -= np.array(self.fc_info[j][3])  ### This case for 0, 0 [0,0] like on-site energies
+                                #print i, self.fc_info[j][0], self.fc_info[j][1], self.fc_info[j][2], np.array(self.fc_info[j][3])
                         else:
                             fc_from_asr -= np.array(self.fc_info[j][3])
                 fc_temp = [i, i, [0,0,0], fc_from_asr]
+                #print fc_temp
                 self.fc_info.append(fc_temp)
                 hopping_from_asr = [0, fc_from_asr[0][0]]
                 hopping_temp = [i, i, [0,0,0], hopping_from_asr]
-                self.hopping_save.append(hopping_temp)
+                #self.hopping_save.append(hopping_temp)
             
         return 0
 
@@ -644,7 +665,7 @@ class DynamicalMatrix:
                     for k in range(len(proper_fc_info)):
                         r = np.dot(self.latt_vec.transpose(), np.array(proper_fc_info[k][0]).transpose())
                         phase_factor = np.exp(np.vdot(r, q) * 1j)
-                        if np.linalg.norm(r) ==0:
+                        if np.linalg.norm(r) == 0.0:
                             dm_local += proper_fc_info[k][1] * phase_factor / mass_factor
                         else:
                             dm_local += proper_fc_info[k][1] * phase_factor / mass_factor + (proper_fc_info[k][1] * phase_factor / mass_factor).conj().transpose()
@@ -1042,8 +1063,8 @@ class DynamicalMatrix:
                     #temp_direct[1] = temp_direct[1] - np.round(temp_direct[1])
                     q_vec_list.append(temp_direct)
             #print len(q_vec_list)
-        elif q_grid[0] == 'berrycurv':
-            mode_name = 'berrycurv'
+        elif q_grid[0] == 'berrycurv_slice':
+            mode_name = 'berrycurv_slice'
             qx_range = np.array(q_grid[1])
             qy_range = np.array(q_grid[2])
             qz_infor = np.array(q_grid[3])
@@ -1071,7 +1092,7 @@ class DynamicalMatrix:
                 initial = np.array(q_path[i])
                 final = np.array(q_path[i+1])
                 for j in range(q_spacing):
-                    delta = (final - initial) / float(q_spacing-1)
+                    delta = (final - initial) / float(q_spacing)
                     temp = initial + delta*j
                     q_vec_list.append(temp)
         else:
@@ -1092,7 +1113,7 @@ class DynamicalMatrix:
             bf.write(str(q_grid[4])+'\t'+str(len(q_grid[1])*q_grid[2])+'\t'+'1'+'\t'+str(self.num_atom*self.dimension*2)+'\n') # For q_line mode
         if q_grid[0] == 'node':
             bf.write(str(q_grid[4])+'\t'+str(q_grid[3])+'\t'+'1'+'\t'+str(self.num_atom*self.dimension*2)+'\n') # For q_node mode
-        if q_grid[0] == 'berrycurv':
+        if q_grid[0] == 'berrycurv_slice':
             bf.write(str(q_grid[4])+'\t'+str(q_grid[5])+'\t'+'1'+'\t'+str(self.num_atom*self.dimension*2)+'\n') # For berry curvature mode
         if q_grid[0] == 'berryphase':
             bf.write(str(len(q_vec_list))+'\t'+str(self.num_atom*self.dimension*2)+'\n') # For berry curvature mode
@@ -1107,11 +1128,25 @@ class DynamicalMatrix:
         for i in range(len(q_vec_list)):
             print 'Process: ' + str(i+1) +'/' + str(len(q_vec_list))
             q_vec = q_vec_list[i]
-            dyn = self.construct_dynamicalmatrix_q(q_vec)
+            G = np.round(q_vec) 
+            print G
+            q_vec_refined = q_vec - G 
+            dyn = self.construct_dynamicalmatrix_q(q_vec_refined)
             modified_dyn = self.DM_spectral_decomposition(dyn)
             modified_dyn = self.make_phTB_H_ver2(modified_dyn)
             w1, v1 = np.linalg.eigh(modified_dyn)
             q = np.dot(self.recip_vec.transpose(), np.array(q_vec).transpose())
+            ##################################################################
+            refined_v1 = np.zeros((len(w1),len(w1)), dtype=complex)
+            G_cart = np.dot(self.recip_vec.transpose(), np.array(G).transpose())
+            x = np.dot(self.latt_vec.transpose(), np.array(self.atom_pos).transpose())
+            product = np.dot(G_cart,x)
+            for cc in range(len(w1)):
+                for bb in range(self.num_atom):
+                    for aa in range(self.dimension):
+                        refined_v1[bb*self.dimension + aa][cc] = v1[bb*self.dimension + aa][cc] * np.exp(-1.j*product[bb])
+                        refined_v1[bb*self.dimension + aa + len(w1)/2][cc] = v1[bb*self.dimension + aa + len(w1)/2][cc] * np.exp(-1.j*product[bb])
+            ##################################################################
             band_num = len(w1)
             if self.dimension ==3:
                 line = 'kx' + '\t' + 'ky' + '\t' + 'kz' + '\t' + str(q_vec[0]) + '\t' + str(q_vec[1]) + '\t' + str(q_vec[2]) + '\t' + str(q[0]) + '\t' + str(q[1]) + '\t' + str(q[2]) + '\n'
@@ -1121,7 +1156,8 @@ class DynamicalMatrix:
             for j in range(band_num):
                 line = str(j+1) + '\t' + str(w1[j]) + '\t'
                 for k in range(band_num):
-                    line += str(v1[k][j]) + '\t'
+                    #line += str(v1[k][j]) + '\t'
+                    line += str(refined_v1[k][j]) + '\t'
                 line += '\n'
                 bf.write(line)
             bf.write('\n')
@@ -1268,8 +1304,10 @@ class ComputeTopologicalInvariants:
             self.phband_file = 'phband_PROCAR_'+self.out_tag+'_linemode.out'
         elif self.q_grid[0] == 'node':
             self.phband_file = 'phband_PROCAR_'+self.out_tag+'_nodemode.out'
-        elif self.q_grid[0] == 'berrycurv':
-            self.phband_file = 'phband_PROCAR_'+self.out_tag+'_berrycurve.out'
+        elif self.q_grid[0] == 'berrycurv_line':
+            self.phband_file = 'phband_PROCAR_'+self.out_tag+'_berrycurve_line.out'
+        elif self.q_grid[0] == 'berrycurv_slice':
+            self.phband_file = 'phband_PROCAR_'+self.out_tag+'_berrycurve_slice.out'
         elif self.q_grid[0] == 'berryphase':
             self.phband_file = 'phband_PROCAR_'+self.out_tag+'_berryphase.out'
         self.band_range = band_range
@@ -1466,13 +1504,20 @@ class ComputeTopologicalInvariants:
         F =  np.identity(self.br, dtype=complex)
         phi =  np.linalg.det(F)
 
-        for i in range(nkx-1):
+        for i in range(nkx):
             temp = np.zeros((self.br, self.br), dtype=complex)
-            for k in range(self.br):
-                for j in range(self.br):
-                    A = np.conjugate(wf_data[i][band_range[k]])
-                    B = np.array(wf_data[i+1][band_range[j]])
-                    temp[k,j] = np.dot(A,B)
+            if i == nkx-1:
+                for k in range(self.br):
+                    for j in range(self.br):
+                        A = np.conjugate(wf_data[i][self.band_range[k]])
+                        B = np.array(wf_data[0][self.band_range[j]])
+                        temp[k,j] = np.dot(A,B)
+            else:
+                for k in range(self.br):
+                    for j in range(self.br):
+                        A = np.conjugate(wf_data[i][self.band_range[k]])
+                        B = np.array(wf_data[i+1][self.band_range[j]])
+                        temp[k,j] = np.dot(A,B)
             phi = phi * np.linalg.det(temp)
 
         berry = -1 * np.imag(np.log(phi))

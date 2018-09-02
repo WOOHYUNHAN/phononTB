@@ -1534,7 +1534,7 @@ manipulate_fc_info2 = [True, [0,1,0,1,0,1],[1.0, 1.0, 1.0]]
 #get_phonon_band(q_path2, 'POSCAR_Bi2Te3', 'SPOSCAR_Bi2Te3', 'FORCE_CONSTANTS_Bi2Te3', multiple, mass15, q_spacing, symprec, alpha, dimension, manipulate_fc_info0)
 #get_phonon_band('GaN_bulk_noSPI', q_path11, 'POSCAR_GaN', 'SPOSCAR_GaN', 'FORCE_CONSTANTS_GaN', multiple7, mass16, q_spacing, symprec, alpha0, dimension, manipulate_fc_info0)
 #get_phonon_band('GaN_bulk_SPI_Inv', q_path11, 'POSCAR_GaN', 'SPOSCAR_GaN', 'FORCE_CONSTANTS_GaN', multiple7, mass16, q_spacing, symprec, alpha_GaN_bulk_Inv, dimension, manipulate_fc_info0)
-#get_phonon_band('MoSe2_bulk_noSPI', q_path11, 'POSCAR_MoSe2_bulk', 'SPOSCAR_MoSe2_bulk', 'FORCE_CONSTANTS_MoSe2_bulk', multiple9, mass16, q_spacing, symprec, alpha0, dimension, manipulate_fc_info0)
+get_phonon_band('MoSe2_bulk_noSPI', q_path11, 'POSCAR_MoSe2_bulk', 'SPOSCAR_MoSe2_bulk', 'FORCE_CONSTANTS_MoSe2_bulk', multiple9, mass16, q_spacing, symprec, alpha0, dimension, manipulate_fc_info0)
 #get_phonon_band('MoSe2_bulkAA_noSPI', q_path11, 'POSCAR_MoSe2_bulkAA', 'SPOSCAR_MoSe2_bulkAA', 'FORCE_CONSTANTS_MoSe2_bulkAA', multiple9, mass16, q_spacing, symprec, alpha0, dimension, manipulate_fc_info0)
 #get_phonon_band('MoSe2_bulk_SPI_Inv', q_path11, 'POSCAR_MoSe2_bulk', 'SPOSCAR_MoSe2_bulk', 'FORCE_CONSTANTS_MoSe2_bulk', multiple9, mass16, q_spacing, symprec, alpha_MoSe2_bulk_Inv, dimension, manipulate_fc_info0)
 #get_phonon_band('MoSe2_bulk_SPI_noInv_003z', q_path11, 'POSCAR_MoSe2_bulk', 'SPOSCAR_MoSe2_bulk', 'FORCE_CONSTANTS_MoSe2_bulk', multiple9, mass16, q_spacing, symprec, alpha_MoSe2_bulk_noInv_z, dimension, manipulate_fc_info0)
