@@ -703,19 +703,31 @@ class DynamicalMatrix:
     def make_phTB_H_ver2(self, dm):
         dm_new = np.zeros((len(dm)*2,len(dm)*2), dtype=complex)
         gamma = np.zeros((len(dm),len(dm)), dtype=complex)
-    
-        if len(self.TRS_broken) == self.num_atom:
-            alpha_set = self.TRS_broken
-        elif len(self.TRS_broken) == 1:
-            #print 'constant alpha'
-            alpha_set = []
-            for i in range(self.num_atom):
-                alpha_set.append(self.TRS_broken[0]) 
-        #print alpha_set
-        else:
-            print 'alpha error'
-
-        #print alpha_set
+        
+        if not self.edge_cal: ### This calculations for bulk calculations
+            if len(self.TRS_broken) == 1:
+                #print 'constant alpha'
+                alpha_set = []
+                for i in range(self.num_atom):
+                    alpha_set.append(self.TRS_broken[0]) 
+            elif len(self.TRS_broken) == self.num_atom:
+                alpha_set = self.TRS_broken
+            else:
+                print 'alpha error'
+        else: ### This calculations for edge calculations
+            if len(self.TRS_broken) == 1:
+                #print 'constant alpha'
+                alpha_set = []
+                for i in range(self.num_atom):
+                    alpha_set.append(self.TRS_broken[0]) 
+            #print alpha_set
+            elif len(self.TRS_broken) == int(self.num_atom) / int(self.num_repeat):
+                alpha_set = []
+                for i in range(len(self.TRS_broken)):
+                    for j in range(self.num_repeat):
+                        alpha_set.append(self.TRS_broken[i])
+            else:
+                print 'alpha error'           
 
         for i in range(self.num_atom):
             alpha = alpha_set[i]
