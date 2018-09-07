@@ -1305,6 +1305,65 @@ class DynamicalMatrix:
         f.close()
         return 0
 
+    def get_total_phononDOS(self, phdos_range, nmesh, ngrid, sigma):
+        vasp2THZ = 15.633302
+        if len(nmesh) != self.dimension:
+            print "ERROR: mesh error"
+            return 0
+        if len(phdos_range) == 0:
+            q_vec = np.zeros(self.dimension)
+            dyn = self.construct_dynamicalmatrix_q(q_vec)
+            modified_dyn = self.DM_spectral_decomposition(dyn)
+            modified_dyn = self.make_phTB_H_ver2(modified_dyn)
+            w1 = np.linalg.eigvalsh(modified_dyn) * vasp2THZ
+            phdos_range = [0.0, np.max(w1)+5.0] # default: consider only positive frequency
+
+        total_mesh = 0
+        q_vec_list = []
+        if self.dimension == 2:
+            for i in range(nmesh[0]):
+                for j in range(nmesh[1]):
+                    total_mesh += 1
+                    qx_temp, qy_temp = (1.0/nmesh[0])*i, (1.0/nmesh[0])*j
+                    q_vec_list.append([qx_temp, qy_temp])
+        if self.dimension == 3:
+            for i in range(nmesh[0]):
+                for j in range(nmesh[1]):
+                    for k in range(nmesh[2]):
+                        total_mesh += 1
+                        qx_temp, qy_temp, qz_temp= (1.0/nmesh[0])*i, (1.0/nmesh[0])*j, (1.0/nmesh[0])*k
+                        q_vec_list.append([qx_temp, qy_temp, qz_temp])
+        
+        phdos_value = np.zeros(ngrid)
+        phdos_freq = np.linspace(phdos_range[0], phdos_range[1], num=ngrid)
+
+        for i in range(total_mesh):
+            print 'Process: ' + str(i+1) +'/' + str(len(q_vec_list))
+            q_vec = q_vec_list[i]
+            dyn = self.construct_dynamicalmatrix_q(q_vec)
+            modified_dyn = self.DM_spectral_decomposition(dyn)
+            modified_dyn = self.make_phTB_H_ver2(modified_dyn)
+            w1 = np.linalg.eigvalsh(modified_dyn) * vasp2THZ
+            for j in range(len(w1)/2, len(w1)):
+                temp_freq = phdos_freq - w1[j]
+                phdos_value += (1.0 / (2.0*np.pi*sigma)) * np.exp(-0.5*temp_freq*temp_freq/(sigma*sigma))
+        phdos_value = phdos_value / total_mesh
+
+        #for i in range(ngrid):
+        #    print str(phdos_freq[i]) + '\t' + str(phdos_value[i])
+
+        outname = 'TotalPHDOS_'+self.out_tag+'.out'
+        g = open(outname, 'w')
+
+        for i in range(ngrid):
+            temp_line = str(phdos_freq[i]) + '\t' + str(phdos_value[i])+ '\n'
+            g.write(temp_line)
+
+        g.close()
+
+
+        return 0
+
 
 class ComputeTopologicalInvariants:
     def __init__(self, out_tag, band_range, q_grid):
