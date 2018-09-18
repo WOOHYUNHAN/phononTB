@@ -579,7 +579,7 @@ class ForceConstant:
         return 0
 
 class DynamicalMatrix:
-    def __init__(self, name, force_constant, alpha, interlayer_int):
+    def __init__(self, name, force_constant, alpha):
         self.out_tag = name
         self.dimension = force_constant.dimension
         self.num_atom = force_constant.num_atom
@@ -588,7 +588,7 @@ class DynamicalMatrix:
         self.atom_mas = force_constant.atom_mas
         self.fc_info = force_constant.fc_info
         self.TRS_broken = alpha
-        self.interlayer_int = interlayer_int
+        #self.interlayer_int = interlayer_int
         self.edge_cal = force_constant.edge_cal
         self.recip_vec = force_constant.recip_vec
         if self.edge_cal:
@@ -765,7 +765,9 @@ class DynamicalMatrix:
         return dm_new
 
     def add_interlayer_int_term(self):
-
+    	'''
+    	To be implemented
+    	'''
         return 0
 
 
@@ -933,7 +935,6 @@ class DynamicalMatrix:
         fig.savefig('phband.png')
         plt.show()
         
-        
         return 0
 
     def draw_phonon_band_edge_projection(self):
@@ -988,10 +989,54 @@ class DynamicalMatrix:
 
         return 0
 
-    def draw_phonon_projected_band(self, PartA, PartB):
+    def draw_phonon_projected_band_two_parts(self, partA, partB):
         '''
-        draw phonon band projected on two parts along q-path
+        Fourth, draw phonon band along q path
         '''
+        file_name = 'ph_frequecny_'+self.out_tag+'_projected.out'
+        f = open(file_name,'r')
+        tempf = f.readlines()
+        f.close()
+
+        totalline = len(tempf)
+        #print totalline
+        atom_num = len(tempf[1].split()) - 2
+        band_num = 2*self.dimension*atom_num
+        eigv_num = (totalline-1)/(band_num+1)
+        #print totalline,band_num,eigv_num
+
+
+        sqx = [float(tempf[0].split()[i]) for i in range(len(tempf[0].split()))]
+
+        #print sqx
+        fig = plt.figure()
+        plt.axhline(y=0, color='black', linewidth=2)
+        for i in range(len(sqx)):
+            plt.axvline(x=sqx[i], color='black', linewidth=2)
+
+        qx = np.zeros((eigv_num))
+        eigenval = np.zeros((band_num, eigv_num))
+       	atom_projected = np.zeros((band_num, eigv_num)) # normalized to 1
+
+        for i in range(eigv_num):
+            qx[i] = float(tempf[i*(band_num+1)+1].split()[0])
+            for j in range(band_num):
+            	temp_line = tempf[i*(band_num+1) + 1 + j].split()
+                eigenval[j][i] = float(temp_line[1])
+                temp_partA = np.sum(np.array([float(temp_line[k+2]) for k in partA]))
+                temp_partB = np.sum(np.array([float(temp_line[k+2]) for k in partB]))
+                atom_projected[j][i] = (temp_partA) / (temp_partA + temp_partB)
+
+        bubble_size = 10
+        for i in range(band_num):
+            plt.plot(qx, eigenval[i], color='black')
+            plt.scatter(qx, eigenval[i], bubble_size, c=atom_projected[i], cmap='seismic', vmin=0, vmax=1, edgecolors='face')
+
+        #plt.ylim(0, max(eigenval[:][:]))
+        plt.xlim(min(sqx)-0.1, max(sqx)+0.1)
+        fig.savefig('phband_atomprojected_twoparts.png')
+        plt.show()
+        
         return 0
 
 
