@@ -1027,9 +1027,9 @@ class DynamicalMatrix:
                 temp_partB = np.sum(np.array([float(temp_line[k+2]) for k in partB]))
                 atom_projected[j][i] = (temp_partA) / (temp_partA + temp_partB)
 
-        bubble_size = 10
-        for i in range(band_num):
-            plt.plot(qx, eigenval[i], color='black')
+        bubble_size = 40
+        for i in range(band_num/2,band_num):
+            plt.plot(qx, eigenval[i], linewidth=0.3, color='black')
             plt.scatter(qx, eigenval[i], bubble_size, c=atom_projected[i], cmap='seismic', vmin=0, vmax=1, edgecolors='face')
 
         #plt.ylim(0, max(eigenval[:][:]))
