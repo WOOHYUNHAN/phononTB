@@ -993,6 +993,7 @@ class DynamicalMatrix:
         '''
         Fourth, draw phonon band along q path
         '''
+        vasp2THZ = 15.633302
         file_name = 'ph_frequecny_'+self.out_tag+'_projected.out'
         f = open(file_name,'r')
         tempf = f.readlines()
