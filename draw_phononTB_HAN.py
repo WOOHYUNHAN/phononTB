@@ -1005,6 +1005,17 @@ class DynamicalMatrix:
         eigv_num = (totalline-1)/(band_num+1)
         #print totalline,band_num,eigv_num
 
+        if self.edge_cal:
+            upper_part = []; lower_part = []
+            for i in range(len(partA)):
+                for j in range(self.num_repeat):
+                    upper_part.append(partA[i]*(self.num_repeat) + j)
+            for i in range(len(partB)):
+                for j in range(self.num_repeat):
+                    lower_part.append(partB[i]*(self.num_repeat) + j)
+        else:
+            upper_part = partA ; lower_part = partB
+
 
         sqx = [float(tempf[0].split()[i]) for i in range(len(tempf[0].split()))]
 
@@ -1023,14 +1034,14 @@ class DynamicalMatrix:
             for j in range(band_num):
             	temp_line = tempf[i*(band_num+1) + 1 + j].split()
                 eigenval[j][i] = float(temp_line[1])
-                temp_partA = np.sum(np.array([float(temp_line[k+2]) for k in partA]))
-                temp_partB = np.sum(np.array([float(temp_line[k+2]) for k in partB]))
+                temp_partA = np.sum(np.array([float(temp_line[k+2]) for k in upper_part]))
+                temp_partB = np.sum(np.array([float(temp_line[k+2]) for k in lower_part]))
                 atom_projected[j][i] = (temp_partA) / (temp_partA + temp_partB)
 
         bubble_size = 40
         for i in range(band_num/2,band_num):
-            plt.plot(qx, eigenval[i], linewidth=0.3, color='black')
-            plt.scatter(qx, eigenval[i], bubble_size, c=atom_projected[i], cmap='seismic', vmin=0, vmax=1, edgecolors='face')
+            plt.plot(qx, eigenval[i]*vasp2THZ, linewidth=0.3, color='black')
+            plt.scatter(qx, eigenval[i]*vasp2THZ, bubble_size, c=atom_projected[i], cmap='RdBu', vmin=0, vmax=1, edgecolors='face')
 
         #plt.ylim(0, max(eigenval[:][:]))
         plt.xlim(min(sqx)-0.1, max(sqx)+0.1)
@@ -1331,8 +1342,9 @@ class DynamicalMatrix:
         q_vec = q_point
         dyn = self.construct_dynamicalmatrix_q(q_vec)
         modified_dyn = self.DM_spectral_decomposition(dyn)
-        modified_dyn = self.make_phTB_H_ver2(modified_dyn)
-        w1, v1 = np.linalg.eigh(modified_dyn)
+        modified_dyn_inv = np.linalg.inv(modified_dyn)
+        modified_dyn_full = self.make_phTB_H_ver2(modified_dyn)
+        w1, v1 = np.linalg.eigh(modified_dyn_full)
         #print np.linalg.norm(v1[:,17])
     
         #w2 = np.linalg.eigvalsh(dyn).real
