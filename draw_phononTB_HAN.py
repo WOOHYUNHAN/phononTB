@@ -278,10 +278,12 @@ class Read_FC_from_other_calculators:
     def print_all_information(self):
         filename = 'information_file'
         f = open(filename, 'w')
-        initial_line =' < ' + '\t' + 'Aatom' + '\t' + ' |  H  | ' + '\t' +  'Batom' + '\t'  + ' [ ' + '\t' + 'superx' + '\t' + 'supery' + '\t' + 'superz' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '===>' + '\t' + 'V_pps' + '\t' + 'V_ppp'  + '\n' 
+        #initial_line =' < ' + '\t' + 'Aatom' + '\t' + ' |  H  | ' + '\t' +  'Batom' + '\t'  + ' [ ' + '\t' + 'superx' + '\t' + 'supery' + '\t' + 'superz' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '===>' + '\t' + 'V_pps' + '\t' + 'V_ppp'  + '\n' 
+        initial_line =' < ' + '\t' + 'Aatom' + '\t' + ' |  H  | ' + '\t' +  'Batom' + '\t'  + ' [ ' + '\t' + 'superx' + '\t' + 'supery' + '\t' + 'superz' + '\t' + ' ]  = ' + '\t' + 'distance' + '\t' + '===>' + '\t' + 'Frobenius norm' + '\n' 
         f.write(initial_line)
         for i in range(len(self.fc_information)):
-            templine = ' < ' + '\t' + str(self.fc_information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.fc_information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.fc_information[i][3][0]) + '\t' + str(self.fc_information[i][3][1]) + '\t' + str(self.fc_information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.fc_information[i][4]) + '\t' + '===>' + '\t' + str(self.hopping[i][3][0]) + '\t' + str(self.hopping[i][3][1]) 
+            #templine = ' < ' + '\t' + str(self.fc_information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.fc_information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.fc_information[i][3][0]) + '\t' + str(self.fc_information[i][3][1]) + '\t' + str(self.fc_information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.fc_information[i][4]) + '\t' + '===>' + '\t' + str(self.hopping[i][3][0]) + '\t' + str(self.hopping[i][3][1]) 
+            templine = ' < ' + '\t' + str(self.fc_information[i][0]) + '\t' + ' |  H  | ' + '\t' +  str(self.fc_information[i][2]) + '\t'  + ' [ ' + '\t' + str(self.fc_information[i][3][0]) + '\t' + str(self.fc_information[i][3][1]) + '\t' + str(self.fc_information[i][3][2]) + '\t' + ' ]  = ' + '\t' + str(self.fc_information[i][4]) + '\t' + '===>' + '\t' + str(np.linalg.norm(self.fc_information[i][5],ord='fro'))
             for j in range(3):
                 for k in range(3):
                     templine += '\t' + str(self.fc_information[i][5][j][k])
