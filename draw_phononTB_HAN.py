@@ -275,6 +275,7 @@ class Read_FC_from_other_calculators:
         V_pps = final_results[0] ; V_ppp = final_results[1]
         return V_pps, V_ppp
 
+
     def print_all_information(self):
         filename = 'information_file'
         f = open(filename, 'w')
@@ -460,6 +461,17 @@ class ForceConstant:
         #    self.set_hopping(other_calculator.hopping[i][0], other_calculator.hopping[i][1], other_calculator.hopping[i][2], other_calculator.hopping[i][3])
         if asr:
             self.set_acoustic_sum_rule()
+
+    def manipulate_interlayer_fc(self, layer1, layer2, multiplication_factor):
+        for i in range(len(self.fc_info)):
+            if int(self.fc_info[i][0]) in layer1:
+                if int(self.fc_info[i][1]) in layer2:
+                    self.fc_info[i][3] = self.fc_info[i][3] * multiplication_factor
+            if int(self.fc_info[i][0]) in layer2:
+                if int(self.fc_info[i][1]) in layer1:
+                    self.fc_info[i][3] = self.fc_info[i][3] * multiplication_factor
+        return 0 
+
 
     def print_info(self):
         print 'Dimension = ' + str(self.dimension)
