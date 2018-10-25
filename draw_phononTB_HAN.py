@@ -1622,7 +1622,8 @@ class ComputeTopologicalInvariants:
         #    line += str(A[j]) + '\t'
         #print line
 
-        f = open('WCC.out', 'w')
+        WCC_file_name = 'WCC_' + out_tag
+        f = open(WCC_file_name, 'w')
 
         for i in range(len(x)):
             line = str(x[i])
