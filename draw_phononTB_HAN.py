@@ -1622,6 +1622,17 @@ class ComputeTopologicalInvariants:
         #    line += str(A[j]) + '\t'
         #print line
 
+        f = open('WCC.out', 'w')
+
+        for i in range(len(x)):
+            line = str(x[i])
+            for j in range(self.br):
+                line += '\t' + str(y[j][i])
+            line += '\n'
+            f.write(line)
+        f.close()
+
+
         for i in range(self.br):
             plt.plot(x, y[i], linestyle="none", marker="o", ms=5, markeredgecolor='black', markerfacecolor='black')
         plt.title(str(self.band_range))
