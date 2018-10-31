@@ -900,7 +900,7 @@ class DynamicalMatrix:
         if self.edge_cal:
             for i in range(len(q_vec_list)):
                 for j in range(band_num):
-                    templine = str(q_distance_list[i]) + ' ' + str(band_structure[i][j]*vasp2THZ) + ' ' + str(pos_expectation[i][j])
+                    templine = str(q_distance_list[i]) + ' ' + str(band_structure[i][j]) + ' ' + str(pos_expectation[i][j])
                     templine += '\n'
                     g3.write(templine)
                 g3.write('\n')
@@ -993,9 +993,15 @@ class DynamicalMatrix:
 
         bubble_size = 40
         for i in range(band_num/2, band_num):
-            plt.plot(qx, eigenval[i], linewidth=0.3, color='black')
-            plt.scatter(qx, eigenval[i], bubble_size, c=projected[i], cmap='RdBu', vmin=0, vmax=self.num_repeat-1, edgecolors='face')
-
+            plt.plot(qx, eigenval[i]*vasp2THZ, linewidth=0.3, color='black')
+            plt.scatter(qx, eigenval[i]*vasp2THZ, bubble_size, c=projected[i], cmap='RdBu', vmin=0, vmax=self.num_repeat-1, edgecolors='face')
+        
+        #### save np file
+        save_path = '.'
+        np.save('{}/sqx.npy'.format(save_path), sqx)
+        np.save('{}/qx.npy'.format(save_path), qx)
+        np.save('{}/eigenval.npy'.format(save_path), eigenval)
+        np.save('{}/edge_projected.npy'.format(save_path), projected)
 
         plt.xlim(min(sqx)-0.1, max(sqx)+0.1)
         fig.savefig('phband_edge.png')
@@ -1057,6 +1063,13 @@ class DynamicalMatrix:
         for i in range(band_num/2,band_num):
             plt.plot(qx, eigenval[i]*vasp2THZ, linewidth=0.3, color='black')
             plt.scatter(qx, eigenval[i]*vasp2THZ, bubble_size, c=atom_projected[i], cmap='RdBu', vmin=0, vmax=1, edgecolors='face')
+
+        #### save np file
+        save_path = '.'
+        np.save('{}/sqx.npy'.format(save_path), sqx)
+        np.save('{}/qx.npy'.format(save_path), qx)
+        np.save('{}/eigenval.npy'.format(save_path), eigenval)
+        np.save('{}/atom_projected.npy'.format(save_path), atom_projected)
 
         #plt.ylim(0, max(eigenval[:][:]))
         plt.xlim(min(sqx)-0.1, max(sqx)+0.1)
