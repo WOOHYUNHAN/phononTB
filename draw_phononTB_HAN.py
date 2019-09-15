@@ -993,8 +993,8 @@ class DynamicalMatrix:
 
         bubble_size = 40
         for i in range(band_num/2, band_num):
-            plt.plot(qx, eigenval[i]*vasp2THZ, linewidth=0.3, color='black')
-            plt.scatter(qx, eigenval[i]*vasp2THZ, bubble_size, c=projected[i], cmap='RdBu', vmin=0, vmax=self.num_repeat-1, edgecolors='face')
+            plt.plot(qx, eigenval[i], linewidth=0.3, color='black')
+            plt.scatter(qx, eigenval[i], bubble_size, c=projected[i], cmap='RdBu', vmin=0, vmax=self.num_repeat-1, edgecolors='face')
         
         #### save np file
         save_path = '.'
