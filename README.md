@@ -10,7 +10,7 @@
 ## Reference
 
 1. Hamiltonian for phonons: https://link.aps.org/doi/10.1103/PhysRevB.96.064106
-2. In preparation: W.H.Han and K.J.Chang (2018)
+2. phononTB: **W.H. Han** and K.J. Chang, **“Quantum Spin Hall-like Phononic States in van der Waals Bilayers with Antiferromagnetic Ordering”**, [*arXiv*](https://arxiv.org/abs/1903.05286) (2019)
 
 ## History
 
